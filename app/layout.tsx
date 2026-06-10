@@ -1,18 +1,25 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
+import { Inter } from "next/font/google";
 import "./globals.css";
-import LenisProvider from "@/components/LenisProvider";
+
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
-  title: "FieldForce 360",
-  description: "Intelligent Field Service Management for enterprise field operations.",
+  title: "FieldForce 360 — Intelligent Field Service Management",
+  description:
+    "Executive-grade field service intelligence: live tracking, AI dispatch, predictive analytics, and technician execution in one control pane.",
+};
+
+export const viewport: Viewport = {
+  themeColor: "#080C14",
+  width: "device-width",
+  initialScale: 1,
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body>
-        <LenisProvider>{children}</LenisProvider>
-      </body>
+    <html lang="en" className={`${inter.variable} bg-background`}>
+      <body className="font-sans antialiased">{children}</body>
     </html>
   );
 }

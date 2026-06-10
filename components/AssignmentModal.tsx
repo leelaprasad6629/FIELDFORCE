@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Bot, ShieldCheck, Sparkles } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { Zap, X, Sparkles, CheckCircle2, MapPin } from "lucide-react";
 
 interface AssignmentModalProps {
   request: {
@@ -40,7 +41,7 @@ export default function AssignmentModal({ request, onAssign }: AssignmentModalPr
     window.setTimeout(() => {
       setIsAnalyzing(false);
       setMatchReady(true);
-    }, 1500);
+    }, 1600);
   };
 
   const approveDispatch = () => {
@@ -48,76 +49,129 @@ export default function AssignmentModal({ request, onAssign }: AssignmentModalPr
     setIsOpen(false);
   };
 
+  const assigned = request.status === "Assigned";
+
   return (
-    <div>
-      <button
+    <>
+      <motion.button
         type="button"
         onClick={openDialog}
-        className="inline-flex items-center gap-2 rounded-2xl bg-violet-500/20 px-4 py-2 text-sm font-semibold text-white transition hover:bg-violet-500/30"
+        disabled={assigned}
+        whileHover={{ scale: assigned ? 1 : 1.02 }}
+        whileTap={{ scale: assigned ? 1 : 0.98 }}
+        className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-shadow ${
+          assigned
+            ? "cursor-default border border-emerald/30 bg-emerald/10 text-emerald"
+            : "bg-gradient-to-r from-cyan to-indigo text-white shadow-glow-cyan hover:shadow-glow-indigo"
+        }`}
       >
-        <ShieldCheck size={16} />
-        Smart AI Assignment
-      </button>
+        {assigned ? (
+          <>
+            <CheckCircle2 className="h-4 w-4" />
+            Assigned
+          </>
+        ) : (
+          <>
+            <Zap className="h-4 w-4" fill="currentColor" />
+            Smart AI Assignment
+          </>
+        )}
+      </motion.button>
 
-      {isOpen ? (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/90 p-4 backdrop-blur-xl">
-          <div className="w-full max-w-2xl rounded-[32px] border border-white/10 bg-surface p-6 shadow-xl shadow-violet-500/20">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-sm uppercase tracking-[0.32em] text-violet-300">Smart AI Assignment</p>
-                <h2 className="mt-3 text-2xl font-semibold text-white">Scanning closest available technicians</h2>
-                <p className="mt-2 text-sm text-slate-300">AI scanning closest available technicians based on skills and proximity...</p>
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 grid place-items-center bg-background/80 p-4 backdrop-blur-md"
+            onClick={() => setIsOpen(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, y: 24, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 24, scale: 0.96 }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
+              onClick={(e) => e.stopPropagation()}
+              className="glass w-full max-w-lg p-6"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan/10 text-cyan ring-1 ring-cyan/30">
+                    <Sparkles className="h-5 w-5" />
+                  </span>
+                  <div>
+                    <h2 className="text-lg font-bold text-white">Smart AI Assignment</h2>
+                    <p className="text-sm text-zinc-400">{request.id} · {request.title}</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsOpen(false)}
+                  className="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-white/10 hover:text-white"
+                >
+                  <X className="h-5 w-5" />
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => setIsOpen(false)}
-                className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-300 hover:bg-white/10"
-              >
-                Close
-              </button>
-            </div>
 
-            <div className="mt-6 rounded-3xl border border-violet-500/20 bg-white/5 p-6">
-              {isAnalyzing ? (
-                <div className="flex flex-col items-center gap-4 py-8 text-center text-slate-300">
-                  <div className="h-16 w-16 animate-spin rounded-full border-4 border-violet-500/40 border-t-violet-300" />
-                  <p className="text-sm">Analyzing geo-location, skills cache, and dispatch readiness...</p>
-                </div>
-              ) : null}
-              {matchReady ? (
-                <div className="space-y-4">
-                  <div className="rounded-3xl border border-white/10 bg-surface p-5">
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <p className="text-lg font-semibold text-white">Best Match Recommended</p>
-                        <p className="mt-1 text-sm text-slate-400">{selected.name} ({selected.specialty})</p>
+              <div className="mt-6 rounded-xl border border-white/10 bg-white/[0.03] p-6">
+                {isAnalyzing && (
+                  <div className="flex flex-col items-center gap-4 py-6 text-center">
+                    <div className="h-14 w-14 animate-spin rounded-full border-4 border-cyan/20 border-t-cyan" />
+                    <p className="text-sm text-zinc-400">
+                      Analyzing geo-location, skills cache, and dispatch readiness...
+                    </p>
+                  </div>
+                )}
+
+                {matchReady && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="space-y-5"
+                  >
+                    <div className="rounded-xl border border-cyan/30 bg-cyan/5 p-5">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs uppercase tracking-wide text-cyan/80">Best match recommended</p>
+                          <p className="mt-1 text-lg font-bold text-white">{selected.name}</p>
+                          <p className="text-sm text-zinc-400">{selected.specialty}</p>
+                        </div>
+                        <span className="rounded-full bg-emerald/15 px-3 py-1 text-xs font-bold text-emerald ring-1 ring-emerald/30">
+                          {selected.score}% Match
+                        </span>
                       </div>
-                      <span className="rounded-full bg-emerald-500/10 px-3 py-1 text-xs uppercase tracking-[0.24em] text-emerald-200">98% Match Score</span>
+                      <div className="mt-4 flex items-center gap-2 text-sm text-zinc-300">
+                        <MapPin className="h-4 w-4 text-cyan" />
+                        {selected.distance.toFixed(1)} km away
+                      </div>
                     </div>
-                    <p className="mt-4 text-sm text-slate-300">Distance: {selected.distance.toFixed(1)}km away</p>
-                  </div>
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <button
-                      type="button"
-                      onClick={approveDispatch}
-                      className="rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-400"
-                    >
-                      Approve Dispatch
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setIsOpen(false)}
-                      className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold text-slate-200 transition hover:bg-white/10"
-                    >
-                      Dismiss
-                    </button>
-                  </div>
-                </div>
-              ) : null}
-            </div>
-          </div>
-        </div>
-      ) : null}
-    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <motion.button
+                        type="button"
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={approveDispatch}
+                        className="rounded-xl bg-emerald px-4 py-3 text-sm font-semibold text-white shadow-[0_0_30px_rgba(16,185,129,0.25)]"
+                      >
+                        Approve Dispatch
+                      </motion.button>
+                      <button
+                        type="button"
+                        onClick={() => setIsOpen(false)}
+                        className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-zinc-300 transition-colors hover:bg-white/10"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
   );
 }
