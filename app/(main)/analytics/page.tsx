@@ -1,72 +1,132 @@
-const delayValues = [
-  { day: "Mon", height: "h-12", label: "1.2h" },
-  { day: "Tue", height: "h-24", label: "2.4h" },
-  { day: "Wed", height: "h-32", label: "3.0h" },
-  { day: "Thu", height: "h-20", label: "1.8h" },
-  { day: "Fri", height: "h-28", label: "2.8h" },
+"use client";
+
+import { motion } from "framer-motion";
+import { TrendingUp, Activity, Clock, Target, Gauge, ArrowUpRight } from "lucide-react";
+import PageHero from "@/components/PageHero";
+import CountUp from "@/components/CountUp";
+import DelayChart from "@/components/analytics/DelayChart";
+import VelocityChart from "@/components/analytics/VelocityChart";
+import SatisfactionRing from "@/components/analytics/SatisfactionRing";
+
+const kpis = [
+  { label: "Avg. Response Time", value: 24, suffix: "m", icon: Clock, accent: "text-cyan ring-cyan/30 bg-cyan/10" },
+  { label: "First-Time Fix Rate", value: 91, suffix: "%", icon: Target, accent: "text-emerald ring-emerald/30 bg-emerald/10" },
+  { label: "Fleet Utilization", value: 87, suffix: "%", icon: Gauge, accent: "text-indigo ring-indigo/30 bg-indigo/10" },
+  { label: "Daily Throughput", value: 138, suffix: "", icon: Activity, accent: "text-amber ring-amber/30 bg-amber/10" },
 ];
 
-const satisfaction = {
-  score: 94.2,
-  detail: "Based on historical routing optimization patterns.",
-};
+function Card({ children, delay = 0, className = "" }: { children: React.ReactNode; delay?: number; className?: string }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: "easeOut", delay }}
+      className={`glass p-6 ${className}`}
+    >
+      {children}
+    </motion.div>
+  );
+}
 
 export default function AnalyticsPage() {
   return (
-    <div className="space-y-8">
-      <section className="rounded-3xl border border-white/10 bg-surface2 p-6 shadow-sm">
-        <p className="text-sm uppercase tracking-[0.32em] text-violet-300">Operational analytics</p>
-        <h2 className="mt-3 text-3xl font-semibold text-white">Predictive performance and trend forecasting</h2>
-        <p className="mt-2 text-sm text-slate-300">Trusted metrics for service completion, delays, and satisfaction across the entire field ecosystem.</p>
-      </section>
+    <div>
+      <PageHero
+        title="Predictive performance and trend forecasting"
+        subtitle="Trusted metrics for service completion, delays, and satisfaction across the entire field ecosystem."
+      />
 
-      <section className="grid gap-6 xl:grid-cols-[1.4fr_1fr]">
-        <div className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-sm">
-          <div className="flex items-center justify-between gap-4">
+      <div className="space-y-6">
+        <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
+          {/* Predictive Service Delay */}
+          <Card>
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-bold text-white">Predictive Service Delay</h3>
+                <p className="text-sm text-zinc-400">Forecasted delay hours by weekday</p>
+              </div>
+              <span className="rounded-full bg-cyan/10 px-3 py-1 text-xs font-semibold text-cyan ring-1 ring-cyan/30">
+                Forecast window active
+              </span>
+            </div>
+            <div className="mt-6">
+              <DelayChart />
+            </div>
+            <p className="mt-4 rounded-lg border border-white/10 bg-white/[0.03] p-3 text-sm text-zinc-400">
+              AI predicts routing delays from weather, traffic, and customer arrival windows.
+            </p>
+          </Card>
+
+          {/* Customer Satisfaction Predictor */}
+          <Card delay={0.1}>
+            <h3 className="text-lg font-bold text-white">Customer Satisfaction Predictor</h3>
+            <div className="mt-4 flex justify-center">
+              <SatisfactionRing value={94.2} />
+            </div>
+            <p className="mt-2 text-center text-sm text-zinc-400">
+              Based on historical routing optimization patterns.
+            </p>
+            <div className="mt-5 grid grid-cols-2 gap-3">
+              <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+                <p className="text-xs text-zinc-500">Predictive accuracy</p>
+                <p className="mt-1 text-xl font-bold text-white">
+                  <CountUp value={89.7} decimals={1} suffix="%" />
+                </p>
+              </div>
+              <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+                <p className="text-xs text-zinc-500">Routing uplift</p>
+                <p className="mt-1 flex items-center gap-1 text-xl font-bold text-emerald">
+                  <ArrowUpRight className="h-5 w-5" />
+                  +21%
+                </p>
+                <p className="text-[11px] text-zinc-500">vs last week</p>
+              </div>
+            </div>
+          </Card>
+        </div>
+
+        {/* Task Velocity */}
+        <Card delay={0.15}>
+          <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm uppercase tracking-[0.3em] text-violet-300">Predictive Service Delay</p>
-              <h3 className="mt-2 text-2xl font-semibold text-white">Delay bar graph</h3>
+              <h3 className="text-lg font-bold text-white">Task Velocity</h3>
+              <p className="text-sm text-zinc-400">Completed tasks over the last 7 days</p>
             </div>
-            <span className="rounded-3xl bg-violet-500/10 px-4 py-2 text-xs uppercase tracking-[0.24em] text-violet-200">Forecast window</span>
+            <span className="flex items-center gap-1.5 text-sm font-semibold text-emerald">
+              <TrendingUp className="h-4 w-4" />
+              Trending up
+            </span>
           </div>
+          <div className="mt-6">
+            <VelocityChart />
+          </div>
+        </Card>
 
-          <div className="mt-8 grid gap-5 rounded-3xl bg-surface p-6">
-            <div className="flex items-end justify-between gap-4 min-h-[220px]">
-              {delayValues.map((segment) => (
-                <div key={segment.day} className="flex flex-col items-center gap-3">
-                  <div className={`flex h-48 w-12 items-end justify-center rounded-3xl bg-slate-900 ${segment.height}`}>
-                    <div className="w-full rounded-t-3xl bg-gradient-to-t from-violet-500 to-fuchsia-500 text-[10px] text-white/90 text-center leading-none">{segment.label}</div>
-                  </div>
-                  <p className="text-sm text-slate-300">{segment.day}</p>
-                </div>
-              ))}
-            </div>
-            <div className="rounded-3xl border border-white/10 bg-surface2 p-4 text-sm text-slate-300">
-              <p className="font-medium text-white">Delay factors</p>
-              <p className="mt-2">AI predicts routing delays from weather, traffic, and customer arrival windows.</p>
-            </div>
-          </div>
+        {/* KPI row */}
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {kpis.map((kpi, i) => {
+            const Icon = kpi.icon;
+            return (
+              <motion.div
+                key={kpi.label}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, ease: "easeOut", delay: 0.2 + i * 0.08 }}
+                className="glass glass-hover group relative overflow-hidden p-5"
+              >
+                <div className="shimmer-overlay" />
+                <span className={`flex h-9 w-9 items-center justify-center rounded-xl ring-1 ${kpi.accent}`}>
+                  <Icon className="h-4 w-4" />
+                </span>
+                <p className="mt-4 text-3xl font-bold text-white">
+                  <CountUp value={kpi.value} suffix={kpi.suffix} />
+                </p>
+                <p className="mt-1 text-sm text-zinc-400">{kpi.label}</p>
+              </motion.div>
+            );
+          })}
         </div>
-
-        <div className="rounded-3xl border border-white/10 bg-surface2 p-6 shadow-sm">
-          <p className="text-sm uppercase tracking-[0.3em] text-violet-300">Customer Satisfaction Predictor</p>
-          <h3 className="mt-3 text-5xl font-semibold text-emerald-400">{satisfaction.score}%</h3>
-          <p className="mt-2 text-sm text-slate-300">Predicted CSAT</p>
-          <div className="mt-6 rounded-3xl bg-white/5 p-5 text-slate-300">
-            <p className="text-sm">{satisfaction.detail}</p>
-            <div className="mt-6 grid gap-4">
-              <div className="rounded-3xl border border-white/10 bg-surface p-4">
-                <p className="text-xs uppercase tracking-[0.28em] text-slate-400">Predictive accuracy</p>
-                <p className="mt-2 text-lg font-semibold text-white">89.7%</p>
-              </div>
-              <div className="rounded-3xl border border-white/10 bg-surface p-4">
-                <p className="text-xs uppercase tracking-[0.28em] text-slate-400">Routing uplift</p>
-                <p className="mt-2 text-lg font-semibold text-white">21% better than last week</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      </div>
     </div>
   );
 }

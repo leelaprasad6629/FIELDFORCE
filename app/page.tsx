@@ -1,89 +1,85 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import Hero from "@/components/Hero";
+import Link from "next/link";
+import { motion } from "framer-motion";
+import { Zap, ArrowRight, Gauge, MapPin, Sparkles } from "lucide-react";
+import AnimatedBackground from "@/components/AnimatedBackground";
 
 const features = [
-  {
-    title: "40% Faster Response",
-    description: "Dynamic dispatch triggers faster arrival windows across all field teams.",
-  },
-  {
-    title: "30% Lower Costs",
-    description: "Optimize routes and resource allocation with smart workflow automation.",
-  },
-  {
-    title: "25% Higher Productivity",
-    description: "Modern technician tools and real-time insights boost service throughput.",
-  },
+  { title: "40% Faster Response", description: "Accelerated dispatch routing across every field team.", icon: Zap },
+  { title: "30% Lower Costs", description: "Automated resource allocation and smart workflows.", icon: Gauge },
+  { title: "25% Higher Productivity", description: "Streamlined task execution and real-time insight.", icon: Sparkles },
 ];
 
 export default function LandingPage() {
-  const router = useRouter();
-  const [formState, setFormState] = useState({ email: "", password: "", name: "" });
-
   return (
-    <main className="min-h-screen bg-surface text-white">
-      <Hero />
+    <main className="relative min-h-screen text-zinc-100">
+      <AnimatedBackground />
 
-      <div className="relative mx-auto max-w-7xl px-6 py-12 lg:px-8">
-        <div className="relative z-10 grid gap-10 rounded-[24px] p-1">
-          <section className="space-y-6">
-            <div className="max-w-3xl">
-              <p className="text-sm uppercase tracking-[0.35em] text-violet-300">FieldForce 360</p>
-              <h2 className="mt-4 text-3xl font-semibold text-white">Trusted features for modern field teams</h2>
-              <p className="mt-4 text-lg text-slate-300">Bring managers and technicians together in one high-fidelity control center with mock dashboards, route visualization, and AI-inspired assignment workflows.</p>
-            </div>
-            <div className="mt-6 grid gap-4 sm:grid-cols-3">
-              {features.map((feature) => (
-                  <div key={feature.title} className="rounded-3xl border border-white/10 bg-surface2 p-5 transition-shadow hover:shadow-md soft-pop">
-                  <h3 className="text-lg font-semibold text-white">{feature.title}</h3>
-                  <p className="mt-2 text-sm text-slate-300">{feature.description}</p>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <section className="mt-12 grid gap-6 lg:grid-cols-[1fr_420px]">
-            <div className="rounded-3xl border border-white/10 bg-surface2 p-8">
-              <p className="text-sm uppercase tracking-[0.36em] text-violet-300">Pure frontend demo</p>
-              <h3 className="mt-3 text-2xl font-semibold text-white">Sign in or create a mock account.</h3>
-              <p className="mt-2 text-sm text-slate-300">No email or phone OTP needed. Use the buttons below to access the dashboard instantly.</p>
-            </div>
-
-            <div className="space-y-4 rounded-3xl border border-white/10 bg-white/5 p-8">
-              <input
-                value={formState.email}
-                onChange={(event) => setFormState({ ...formState, email: event.target.value })}
-                placeholder="Email"
-                className="w-full rounded-3xl border border-white/10 bg-surface p-4 text-white outline-none transition focus:border-violet-400"
-              />
-              <input
-                type="password"
-                value={formState.password}
-                onChange={(event) => setFormState({ ...formState, password: event.target.value })}
-                placeholder="Password"
-                className="w-full rounded-3xl border border-white/10 bg-surface p-4 text-white outline-none transition focus:border-violet-400"
-              />
-              <button
-                type="button"
-                onClick={() => router.push("/dashboard")}
-                className="w-full rounded-3xl bg-violet-500 px-5 py-4 text-sm font-semibold text-white transition hover:bg-violet-400"
-              >
-                Sign In
-              </button>
-              <button
-                type="button"
-                onClick={() => router.push("/dashboard")}
-                className="w-full rounded-3xl border border-white/10 bg-white/5 px-5 py-4 text-sm font-semibold text-slate-100 transition hover:bg-white/10"
-              >
-                Sign Up
-              </button>
-            </div>
-          </section>
+      <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-6">
+        <div className="flex items-center gap-3">
+          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-cyan/15 text-cyan ring-1 ring-cyan/30">
+            <Zap className="h-5 w-5" fill="currentColor" />
+          </span>
+          <span className="text-lg font-bold text-white">FieldForce 360</span>
         </div>
-      </div>
+        <Link
+          href="/dashboard"
+          className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/10"
+        >
+          Sign in
+        </Link>
+      </header>
+
+      <section className="mx-auto max-w-6xl px-6 pb-20 pt-16 text-center">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
+        >
+          <span className="inline-flex items-center gap-2 rounded-full border border-cyan/30 bg-cyan/10 px-3 py-1 text-xs font-medium text-cyan">
+            <MapPin className="h-3.5 w-3.5" />
+            Intelligent Field Service Management
+          </span>
+          <h1 className="mx-auto mt-6 max-w-3xl text-balance text-4xl font-bold tracking-tight text-white sm:text-6xl">
+            Operational insights in one control pane
+          </h1>
+          <p className="mx-auto mt-5 max-w-2xl text-pretty leading-relaxed text-zinc-400">
+            FieldForce 360 combines service intelligence, live tracking, and predictive analytics for
+            executive-grade field operations planning.
+          </p>
+          <div className="mt-8 flex justify-center gap-3">
+            <Link
+              href="/dashboard"
+              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan to-indigo px-6 py-3 text-sm font-semibold text-white shadow-glow-cyan transition-shadow hover:shadow-glow-indigo"
+            >
+              Launch Dashboard
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
+        </motion.div>
+
+        <div className="mt-16 grid gap-4 sm:grid-cols-3">
+          {features.map((f, i) => {
+            const Icon = f.icon;
+            return (
+              <motion.div
+                key={f.title}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, ease: "easeOut", delay: 0.2 + i * 0.1 }}
+                className="glass glass-hover p-6 text-left"
+              >
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan/10 text-cyan ring-1 ring-cyan/30">
+                  <Icon className="h-5 w-5" />
+                </span>
+                <h3 className="mt-4 text-lg font-bold text-white">{f.title}</h3>
+                <p className="mt-1 text-sm text-zinc-400">{f.description}</p>
+              </motion.div>
+            );
+          })}
+        </div>
+      </section>
     </main>
   );
 }

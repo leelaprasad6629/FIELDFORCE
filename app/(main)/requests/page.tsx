@@ -1,28 +1,41 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import AssignmentModal from "@/components/AssignmentModal";
+import PageHero from "@/components/PageHero";
 
-const initialRequests = [
-  {
-    id: "REQ-1024",
-    title: "Transformer inspection",
-    description: "Customer reports intermittent power loss at warehouse.",
-    priority: "High",
-    status: "Pending",
-    assignedTechnicianId: "",
-  },
+type Priority = "Critical" | "High" | "Medium" | "Low";
+
+interface ServiceRequest {
+  id: string;
+  title: string;
+  description: string;
+  priority: Priority;
+  status: string;
+  assignedTechnicianId: string;
+}
+
+const initialRequests: ServiceRequest[] = [
   {
     id: "REQ-1138",
-    title: "HVAC calibration",
+    title: "HVAC Calibration",
     description: "Commercial center needs cooling system recalibration.",
     priority: "Critical",
     status: "Pending",
     assignedTechnicianId: "",
   },
   {
+    id: "REQ-1024",
+    title: "Transformer Inspection",
+    description: "Customer reports intermittent power loss at warehouse.",
+    priority: "High",
+    status: "Pending",
+    assignedTechnicianId: "",
+  },
+  {
     id: "REQ-1185",
-    title: "Solar panel cleanup",
+    title: "Solar Panel Cleanup",
     description: "Scheduled preventive maintenance on rooftop arrays.",
     priority: "Medium",
     status: "Pending",
@@ -30,7 +43,7 @@ const initialRequests = [
   },
   {
     id: "REQ-1203",
-    title: "Client zone security audit",
+    title: "Client Zone Security Audit",
     description: "Verify perimeter access and complete security checklist.",
     priority: "High",
     status: "Pending",
@@ -38,8 +51,18 @@ const initialRequests = [
   },
 ];
 
+const tabs: ("All" | Priority)[] = ["All", "Critical", "High", "Medium", "Low"];
+
+const priorityStyles: Record<Priority, string> = {
+  Critical: "bg-rose/15 text-rose ring-rose/30",
+  High: "bg-amber/15 text-amber ring-amber/30",
+  Medium: "bg-cyan/15 text-cyan ring-cyan/30",
+  Low: "bg-emerald/15 text-emerald ring-emerald/30",
+};
+
 export default function RequestsPage() {
   const [requests, setRequests] = useState(initialRequests);
+  const [activeTab, setActiveTab] = useState<(typeof tabs)[number]>("All");
 
   const handleAssign = (id: string) => {
     setRequests((current) =>
@@ -51,48 +74,85 @@ export default function RequestsPage() {
     );
   };
 
-  const requestSections = useMemo(
-    () => requests.sort((a, b) => (a.priority === "Critical" ? -1 : b.priority === "Critical" ? 1 : 0)),
-    [requests]
+  const filtered = useMemo(
+    () => (activeTab === "All" ? requests : requests.filter((r) => r.priority === activeTab)),
+    [requests, activeTab]
   );
 
   return (
-    <div className="space-y-8">
-      <section className="rounded-3xl border border-white/10 bg-surface2 p-6 shadow-sm">
-        <p className="text-sm uppercase tracking-[0.32em] text-violet-300">Service request center</p>
-        <h2 className="mt-3 text-3xl font-semibold text-white">Manage customer demand and AI-assisted dispatch</h2>
-        <p className="mt-2 text-sm text-slate-300">Review workflow, priorities, and let smart assignment accelerate technician matching.</p>
-      </section>
+    <div>
+      <PageHero
+        title="Manage customer demand and AI-assisted dispatch"
+        subtitle="Review workflow, priorities, and let smart assignment accelerate technician matching."
+      />
 
-      <section className="grid gap-4">
-        {requestSections.map((request, i) => (
-            <div key={request.id} className="grid gap-4 rounded-3xl border border-white/10 bg-white/5 p-6 shadow-sm sm:grid-cols-[1fr_auto] sm:items-center soft-pop transition-shadow hover:shadow-md" style={{ animationDelay: `${i * 70}ms` }}>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-sm uppercase tracking-[0.3em] text-violet-300">{request.id}</p>
-                <span className={`rounded-2xl px-3 py-1 text-xs uppercase tracking-[0.28em] ${
-                  request.priority === "Critical"
-                    ? "bg-rose-500/15 text-rose-200"
-                    : request.priority === "High"
-                    ? "bg-violet-500/10 text-violet-200"
-                    : "bg-slate-700 text-slate-200"
-                }`}>
-                  {request.priority}
-                </span>
-              </div>
-              <h3 className="text-xl font-semibold text-white">{request.title}</h3>
-              <p className="text-sm text-slate-300">{request.description}</p>
-              <div className="flex flex-wrap items-center gap-3 text-sm text-slate-300">
-                <span className="rounded-2xl bg-slate-900/80 px-3 py-2">Status: {request.status}</span>
-                <span className="rounded-2xl bg-slate-900/80 px-3 py-2">Assigned: {request.assignedTechnicianId || "Unassigned"}</span>
-              </div>
-            </div>
-            <div className="flex items-center justify-end">
-              <AssignmentModal request={request} onAssign={handleAssign} />
-            </div>
-          </div>
+      {/* Filter tabs */}
+      <div className="mb-6 flex flex-wrap gap-1 rounded-xl border border-white/10 bg-white/[0.03] p-1">
+        {tabs.map((tab) => (
+          <button
+            key={tab}
+            type="button"
+            onClick={() => setActiveTab(tab)}
+            className="relative rounded-lg px-4 py-2 text-sm font-medium transition-colors"
+          >
+            {activeTab === tab && (
+              <motion.span
+                layoutId="tab-pill"
+                className="absolute inset-0 rounded-lg bg-cyan/15 ring-1 ring-cyan/30"
+                transition={{ type: "spring", stiffness: 400, damping: 32 }}
+              />
+            )}
+            <span
+              className={`relative z-10 ${activeTab === tab ? "text-cyan" : "text-zinc-400 hover:text-white"}`}
+            >
+              {tab}
+            </span>
+          </button>
         ))}
-      </section>
+      </div>
+
+      {/* Cards */}
+      <div className="grid gap-4">
+        <AnimatePresence mode="popLayout">
+          {filtered.map((request, i) => (
+            <motion.div
+              key={request.id}
+              layout
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96 }}
+              transition={{ duration: 0.35, ease: "easeOut", delay: i * 0.1 }}
+              className="glass glass-hover flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between"
+            >
+              <div className="space-y-2">
+                <div className="flex items-center gap-3">
+                  <span className="rounded-md bg-white/5 px-2.5 py-1 font-mono text-xs text-zinc-400">
+                    {request.id}
+                  </span>
+                  <span
+                    className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ${priorityStyles[request.priority]}`}
+                  >
+                    {request.priority}
+                  </span>
+                </div>
+                <h3 className="text-lg font-bold text-white">{request.title}</h3>
+                <p className="text-sm text-zinc-400">{request.description}</p>
+                <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">
+                  <span className="rounded-md bg-white/5 px-2.5 py-1 text-zinc-400">
+                    Status: <span className="text-zinc-200">{request.status}</span>
+                  </span>
+                  <span className="rounded-md bg-white/5 px-2.5 py-1 text-zinc-400">
+                    {request.assignedTechnicianId || "Unassigned"}
+                  </span>
+                </div>
+              </div>
+              <div className="shrink-0">
+                <AssignmentModal request={request} onAssign={handleAssign} />
+              </div>
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
     </div>
   );
 }
