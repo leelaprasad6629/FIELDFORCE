@@ -1,53 +1,37 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Radio } from "lucide-react";
 
-const seedAlerts = [
-  "System optimized route for Task #105 via AI Router",
-  "Sarah Chen geo-fenced check-in verified at Client Zone Delta",
-  "High-priority technician alert triggered for standalone zone review",
-];
+export interface AlertData {
+  _id: string;
+  message: string;
+  timestamp: string;
+  type: "info" | "warning" | "critical";
+}
 
-const incoming = [
-  "AI Router rebalanced workload across 3 active zones",
-  "Marcus Vance returned from break and is now available",
-  "Dispatch readiness recalculated: service windows on track",
-  "New service request REQ-1212 received from Client Zone Beta",
-  "Alex Rivera arrival confidence updated to 97%",
-  "Predictive engine flagged weather delay risk on Route 7",
-];
+interface AlertFeedProps {
+  alerts: AlertData[];
+  loading?: boolean;
+}
 
-function timeStamp() {
-  return new Date().toLocaleTimeString("en-US", {
+function formatTime(timestamp: string) {
+  return new Date(timestamp).toLocaleTimeString("en-US", {
     hour: "numeric",
     minute: "2-digit",
     hour12: true,
   });
 }
 
-interface Alert {
-  id: number;
-  time: string;
-  text: string;
+function AlertSkeleton() {
+  return (
+    <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
+      <div className="h-4 w-full animate-pulse rounded bg-white/10" />
+    </div>
+  );
 }
 
-export default function AlertFeed() {
-  const [alerts, setAlerts] = useState<Alert[]>(() =>
-    seedAlerts.map((text, i) => ({ id: i, time: ["11:42 AM", "11:38 AM", "11:30 AM"][i], text }))
-  );
-
-  useEffect(() => {
-    let counter = seedAlerts.length;
-    const interval = setInterval(() => {
-      const text = incoming[counter % incoming.length];
-      counter += 1;
-      setAlerts((prev) => [{ id: counter, time: timeStamp(), text }, ...prev].slice(0, 6));
-    }, 4000);
-    return () => clearInterval(interval);
-  }, []);
-
+export default function AlertFeed({ alerts, loading }: AlertFeedProps) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -64,22 +48,42 @@ export default function AlertFeed() {
       </div>
 
       <div className="mt-5 flex-1 space-y-2 overflow-hidden">
-        <AnimatePresence initial={false}>
-          {alerts.map((alert) => (
-            <motion.div
-              key={alert.id}
-              layout
-              initial={{ opacity: 0, y: -16, height: 0 }}
-              animate={{ opacity: 1, y: 0, height: "auto" }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.35, ease: "easeOut" }}
-              className="rounded-lg border border-white/10 bg-white/[0.03] p-3 text-sm"
-            >
-              <span className="mr-2 font-mono text-xs text-cyan/80">[{alert.time}]</span>
-              <span className="text-zinc-300">{alert.text}</span>
-            </motion.div>
-          ))}
-        </AnimatePresence>
+        {loading ? (
+          Array.from({ length: 5 }).map((_, i) => <AlertSkeleton key={i} />)
+        ) : alerts.length === 0 ? (
+          <p className="rounded-lg border border-white/10 bg-white/[0.03] p-3 text-sm text-zinc-500">
+            No alerts yet. Run <code className="text-cyan">GET /api/seed</code> to populate sample data.
+          </p>
+        ) : (
+          <AnimatePresence initial={false}>
+            {alerts.map((alert) => (
+              <motion.div
+                key={alert._id}
+                layout
+                initial={{ opacity: 0, y: -16, height: 0 }}
+                animate={{ opacity: 1, y: 0, height: "auto" }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.35, ease: "easeOut" }}
+                className="rounded-lg border border-white/10 bg-white/[0.03] p-3 text-sm"
+              >
+                <span className="mr-2 font-mono text-xs text-cyan/80">
+                  [{formatTime(alert.timestamp)}]
+                </span>
+                <span
+                  className={
+                    alert.type === "critical"
+                      ? "text-rose"
+                      : alert.type === "warning"
+                        ? "text-amber"
+                        : "text-zinc-300"
+                  }
+                >
+                  {alert.message}
+                </span>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        )}
       </div>
     </motion.div>
   );

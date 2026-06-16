@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { ClerkProvider } from "@clerk/nextjs";
 import { Inter } from "next/font/google";
 import "./globals.css";
 
@@ -18,8 +19,10 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${inter.variable} bg-background`}>
-      <body className="font-sans antialiased">{children}</body>
-    </html>
+    <ClerkProvider>
+      <html lang="en" className={`${inter.variable} bg-background`}>
+        <body className="font-sans antialiased">{children}</body>
+      </html>
+    </ClerkProvider>
   );
 }

@@ -3,34 +3,70 @@
 import { motion } from "framer-motion";
 import { ArrowUpRight, MapPin, Coffee } from "lucide-react";
 
-const technicians = [
-  {
-    name: "Alex Rivera",
-    detail: "Task #104",
-    status: "On Route",
-    badge: "bg-amber/15 text-amber ring-amber/30",
-    icon: ArrowUpRight,
-    initials: "AR",
-  },
-  {
-    name: "Sarah Chen",
-    detail: "Geo-fenced Check-In Approved",
-    status: "On Site",
-    badge: "bg-emerald/15 text-emerald ring-emerald/30",
-    icon: MapPin,
-    initials: "SC",
-  },
-  {
-    name: "Marcus Vance",
-    detail: "Break",
-    status: "Idle",
-    badge: "bg-zinc-500/15 text-zinc-300 ring-zinc-500/30",
-    icon: Coffee,
-    initials: "MV",
-  },
-];
+export interface TechnicianData {
+  _id: string;
+  name: string;
+  status: "active" | "idle" | "break";
+  currentTask?: string | null;
+  location: string;
+  role: string;
+}
 
-export default function TechnicianFlow() {
+interface TechnicianFlowProps {
+  technicians: TechnicianData[];
+  loading?: boolean;
+}
+
+function getInitials(name: string) {
+  return name
+    .split(" ")
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+}
+
+function getStatusDisplay(status: TechnicianData["status"]) {
+  switch (status) {
+    case "active":
+      return {
+        label: "On Route",
+        badge: "bg-amber/15 text-amber ring-amber/30",
+        icon: ArrowUpRight,
+        detail: (task: string | null | undefined) => task ?? "Active assignment",
+      };
+    case "break":
+      return {
+        label: "Break",
+        badge: "bg-zinc-500/15 text-zinc-300 ring-zinc-500/30",
+        icon: Coffee,
+        detail: () => "Break",
+      };
+    default:
+      return {
+        label: "Idle",
+        badge: "bg-emerald/15 text-emerald ring-emerald/30",
+        icon: MapPin,
+        detail: (task: string | null | undefined, location: string) =>
+          task ?? `Available at ${location}`,
+      };
+  }
+}
+
+function TechnicianSkeleton() {
+  return (
+    <div className="flex items-center gap-4 rounded-xl border border-white/10 bg-white/[0.03] p-4">
+      <div className="h-10 w-10 shrink-0 animate-pulse rounded-full bg-white/10" />
+      <div className="min-w-0 flex-1 space-y-2">
+        <div className="h-4 w-32 animate-pulse rounded bg-white/10" />
+        <div className="h-3 w-48 animate-pulse rounded bg-white/5" />
+      </div>
+      <div className="h-7 w-24 animate-pulse rounded-full bg-white/10" />
+    </div>
+  );
+}
+
+export default function TechnicianFlow({ technicians, loading }: TechnicianFlowProps) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -50,30 +86,43 @@ export default function TechnicianFlow() {
       </div>
 
       <div className="mt-5 flex flex-col gap-3">
-        {technicians.map((tech, i) => {
-          const Icon = tech.icon;
-          return (
-            <motion.div
-              key={tech.name}
-              initial={{ opacity: 0, x: -12 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.35, delay: 0.3 + i * 0.1 }}
-              className="flex items-center gap-4 rounded-xl border border-white/10 bg-white/[0.03] p-4"
-            >
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-cyan/30 to-indigo/30 text-sm font-bold text-white ring-1 ring-white/15">
-                {tech.initials}
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="font-semibold text-white">{tech.name}</p>
-                <p className="truncate text-sm text-zinc-500">{tech.detail}</p>
-              </div>
-              <span className={`flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ring-1 ${tech.badge}`}>
-                <Icon className="h-3.5 w-3.5" />
-                {tech.status}
-              </span>
-            </motion.div>
-          );
-        })}
+        {loading ? (
+          Array.from({ length: 3 }).map((_, i) => <TechnicianSkeleton key={i} />)
+        ) : technicians.length === 0 ? (
+          <p className="rounded-xl border border-white/10 bg-white/[0.03] p-4 text-sm text-zinc-500">
+            No technicians found. Run <code className="text-cyan">GET /api/seed</code> to populate sample data.
+          </p>
+        ) : (
+          technicians.map((tech, i) => {
+            const display = getStatusDisplay(tech.status);
+            const Icon = display.icon;
+            return (
+              <motion.div
+                key={tech._id}
+                initial={{ opacity: 0, x: -12 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.35, delay: 0.3 + i * 0.1 }}
+                className="flex items-center gap-4 rounded-xl border border-white/10 bg-white/[0.03] p-4"
+              >
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-cyan/30 to-indigo/30 text-sm font-bold text-white ring-1 ring-white/15">
+                  {getInitials(tech.name)}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold text-white">{tech.name}</p>
+                  <p className="truncate text-sm text-zinc-500">
+                    {display.detail(tech.currentTask, tech.location)}
+                  </p>
+                </div>
+                <span
+                  className={`flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ring-1 ${display.badge}`}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  {display.label}
+                </span>
+              </motion.div>
+            );
+          })
+        )}
       </div>
     </motion.div>
   );
