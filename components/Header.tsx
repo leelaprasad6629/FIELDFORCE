@@ -1,5 +1,6 @@
 "use client";
 
+import { UserButton } from "@clerk/nextjs";
 import { useRouter, usePathname } from "next/navigation";
 import { Zap } from "lucide-react";
 
@@ -57,10 +58,14 @@ export default function Header() {
             </button>
           </div>
 
-          {/* Avatar */}
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-cyan/30 to-indigo/30 text-sm font-bold text-white ring-1 ring-white/15">
-            PL
-          </div>
+          <UserButton
+            afterSignOutUrl="/sign-in"
+            appearance={{
+              elements: {
+                avatarBox: "h-9 w-9 ring-1 ring-white/15",
+              },
+            }}
+          />
         </div>
       </div>
 

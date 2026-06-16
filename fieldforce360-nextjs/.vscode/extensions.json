@@ -1,0 +1,10 @@
+{
+  "recommendations": [
+    "esbenp.prettier-vscode",
+    "dbaeumer.vscode-eslint",
+    "msjsdiag.vscode-react-native",
+    "ms-vscode.vscode-typescript-tslint-plugin",
+    "pkief.material-icon-theme",
+    "vscode-icons-team.vscode-icons"
+  ]
+}

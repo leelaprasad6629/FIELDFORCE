@@ -4,10 +4,22 @@ import { motion } from "framer-motion";
 import { ClipboardList, Users, ListChecks, Gauge } from "lucide-react";
 import CountUp from "@/components/CountUp";
 
-const stats = [
+export interface DashboardStats {
+  serviceRequests: number;
+  activeTechnicians: number;
+  taskOverview: number;
+  dispatchReadiness: number;
+}
+
+interface StatCardsProps {
+  stats: DashboardStats | null;
+  loading?: boolean;
+}
+
+const statConfig = [
   {
+    key: "serviceRequests" as const,
     label: "Service Requests",
-    value: 142,
     suffix: "",
     decimals: 0,
     description: "Pending and active workloads",
@@ -16,8 +28,8 @@ const stats = [
     ring: "ring-cyan/30 bg-cyan/10",
   },
   {
+    key: "activeTechnicians" as const,
     label: "Active Technicians",
-    value: 18,
     suffix: "",
     decimals: 0,
     description: "Field staff currently online",
@@ -26,8 +38,8 @@ const stats = [
     ring: "ring-emerald/30 bg-emerald/10",
   },
   {
+    key: "taskOverview" as const,
     label: "Task Overview",
-    value: 72,
     suffix: "",
     decimals: 0,
     description: "Tasks in execution across zones",
@@ -36,8 +48,8 @@ const stats = [
     ring: "ring-amber/30 bg-amber/10",
   },
   {
+    key: "dispatchReadiness" as const,
     label: "Dispatch Readiness",
-    value: 96,
     suffix: "%",
     decimals: 0,
     description: "Service windows met",
@@ -47,11 +59,35 @@ const stats = [
   },
 ];
 
-export default function StatCards() {
+function StatCardSkeleton() {
+  return (
+    <div className="glass p-5">
+      <div className="flex items-center justify-between">
+        <div className="h-4 w-28 animate-pulse rounded bg-white/10" />
+        <div className="h-9 w-9 animate-pulse rounded-xl bg-white/10" />
+      </div>
+      <div className="mt-4 h-10 w-20 animate-pulse rounded bg-white/10" />
+      <div className="mt-2 h-4 w-40 animate-pulse rounded bg-white/5" />
+    </div>
+  );
+}
+
+export default function StatCards({ stats, loading }: StatCardsProps) {
+  if (loading || !stats) {
+    return (
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <StatCardSkeleton key={i} />
+        ))}
+      </div>
+    );
+  }
+
   return (
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      {stats.map((stat, i) => {
+      {statConfig.map((stat, i) => {
         const Icon = stat.icon;
+        const value = stats[stat.key];
         return (
           <motion.div
             key={stat.label}
@@ -68,7 +104,7 @@ export default function StatCards() {
               </span>
             </div>
             <p className="mt-4 text-4xl font-bold text-white">
-              <CountUp value={stat.value} decimals={stat.decimals} suffix={stat.suffix} />
+              <CountUp value={value} decimals={stat.decimals} suffix={stat.suffix} />
             </p>
             <p className="mt-1 text-sm text-zinc-500">{stat.description}</p>
           </motion.div>
