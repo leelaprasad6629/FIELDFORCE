@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, MapPin, ClipboardList, BarChart3, HardHat, Zap } from "lucide-react";
+import { LayoutDashboard, MapPin, ClipboardList, BarChart3, HardHat, Star, Zap } from "lucide-react";
 
 const navItems = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -10,6 +10,7 @@ const navItems = [
   { label: "Requests", href: "/requests", icon: ClipboardList },
   { label: "Analytics", href: "/analytics", icon: BarChart3 },
   { label: "Technician", href: "/technician", icon: HardHat },
+  { label: "Reviews", href: "/reviews", icon: Star },
 ];
 
 export default function Sidebar() {

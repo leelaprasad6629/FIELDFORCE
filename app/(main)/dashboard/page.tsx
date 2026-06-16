@@ -3,6 +3,7 @@ import StatCards from "@/components/dashboard/StatCards";
 import GoalBanner from "@/components/dashboard/GoalBanner";
 import TechnicianFlow from "@/components/dashboard/TechnicianFlow";
 import AlertFeed from "@/components/dashboard/AlertFeed";
+import ReviewsHighlight from "@/components/dashboard/ReviewsHighlight";
 
 export default function DashboardPage() {
   return (
@@ -19,6 +20,7 @@ export default function DashboardPage() {
           <TechnicianFlow />
           <AlertFeed />
         </div>
+        <ReviewsHighlight />
       </div>
     </div>
   );
