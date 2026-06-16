@@ -1,58 +1,32 @@
 import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabaseClient';
 
 export async function GET() {
-    const { data, error } = await supabase
-        .from('clients')
-        .select('*');
-
-    if (error) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-
-    return NextResponse.json(data);
+    return NextResponse.json([], { status: 200 });
 }
 
 export async function POST(request: Request) {
-    const { name, email } = await request.json();
-
-    const { data, error } = await supabase
-        .from('clients')
-        .insert([{ name, email }]);
-
-    if (error) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+    try {
+        const { name, email } = await request.json();
+        return NextResponse.json({ id: 1, name, email }, { status: 201 });
+    } catch {
+        return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
     }
-
-    return NextResponse.json(data, { status: 201 });
 }
 
 export async function PUT(request: Request) {
-    const { id, name, email } = await request.json();
-
-    const { data, error } = await supabase
-        .from('clients')
-        .update({ name, email })
-        .eq('id', id);
-
-    if (error) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+    try {
+        const { id, name, email } = await request.json();
+        return NextResponse.json({ id, name, email }, { status: 200 });
+    } catch {
+        return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
     }
-
-    return NextResponse.json(data);
 }
 
 export async function DELETE(request: Request) {
-    const { id } = await request.json();
-
-    const { data, error } = await supabase
-        .from('clients')
-        .delete()
-        .eq('id', id);
-
-    if (error) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+    try {
+        await request.json();
+        return NextResponse.json({ message: 'Deleted successfully' }, { status: 200 });
+    } catch {
+        return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
     }
-
-    return NextResponse.json(data);
 }

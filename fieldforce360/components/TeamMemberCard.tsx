@@ -7,11 +7,10 @@ interface TeamMemberCardProps {
 
 const TeamMemberCard: React.FC<TeamMemberCardProps> = ({ member }) => {
   return (
-    <div className="team-member-card">
-      <img src={member.photoUrl} alt={`${member.name}'s photo`} className="team-member-photo" />
-      <h3 className="team-member-name">{member.name}</h3>
-      <p className="team-member-role">{member.role}</p>
-      <p className="team-member-bio">{member.bio}</p>
+    <div className="border rounded-lg p-4 shadow">
+      <h3 className="text-lg font-semibold">{member.name}</h3>
+      <p className="text-gray-600">{member.role}</p>
+      <p className="text-sm text-gray-500 mt-2">{member.email}</p>
     </div>
   );
 };

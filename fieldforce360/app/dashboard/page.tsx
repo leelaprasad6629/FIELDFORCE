@@ -1,51 +1,43 @@
-import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabaseClient';
-import ProjectCard from '@/components/ProjectCard';
-import ClientList from '@/components/ClientList';
-import TeamMemberCard from '@/components/TeamMemberCard';
-import TimesheetTable from '@/components/TimesheetTable';
+import { Suspense } from 'react';
+import ProjectCard from '@/fieldforce360/components/ProjectCard';
+import ClientList from '@/fieldforce360/components/ClientList';
+import TeamMemberCard from '@/fieldforce360/components/TeamMemberCard';
+import TimesheetTable from '@/fieldforce360/components/TimesheetTable';
 
 const DashboardPage = () => {
-  const [projects, setProjects] = useState([]);
-  const [clients, setClients] = useState([]);
-  const [teamMembers, setTeamMembers] = useState([]);
-  const [timesheets, setTimesheets] = useState([]);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      const { data: projectsData } = await supabase.from('projects').select('*');
-      const { data: clientsData } = await supabase.from('clients').select('*');
-      const { data: teamData } = await supabase.from('team').select('*');
-      const { data: timesheetsData } = await supabase.from('timesheets').select('*');
-
-      setProjects(projectsData);
-      setClients(clientsData);
-      setTeamMembers(teamData);
-      setTimesheets(timesheetsData);
-    };
-
-    fetchData();
-  }, []);
-
   return (
-    <div>
-      <h1>Dashboard</h1>
-      <h2>Projects</h2>
-      <div>
-        {projects.map(project => (
-          <ProjectCard key={project.id} project={project} />
-        ))}
+    <div className="min-h-screen p-8">
+      <h1 className="text-4xl font-bold mb-8">Dashboard</h1>
+
+      <div className="space-y-8">
+        <section>
+          <h2 className="text-2xl font-bold mb-4">Projects</h2>
+          <div className="grid gap-4">
+            <p className="text-gray-600">Projects will be displayed here</p>
+          </div>
+        </section>
+
+        <section>
+          <h2 className="text-2xl font-bold mb-4">Clients</h2>
+          <Suspense fallback={<div>Loading clients...</div>}>
+            <ClientList />
+          </Suspense>
+        </section>
+
+        <section>
+          <h2 className="text-2xl font-bold mb-4">Team Members</h2>
+          <div className="grid gap-4">
+            <p className="text-gray-600">Team members will be displayed here</p>
+          </div>
+        </section>
+
+        <section>
+          <h2 className="text-2xl font-bold mb-4">Timesheets</h2>
+          <Suspense fallback={<div>Loading timesheets...</div>}>
+            <TimesheetTable />
+          </Suspense>
+        </section>
       </div>
-      <h2>Clients</h2>
-      <ClientList clients={clients} />
-      <h2>Team Members</h2>
-      <div>
-        {teamMembers.map(member => (
-          <TeamMemberCard key={member.id} member={member} />
-        ))}
-      </div>
-      <h2>Timesheets</h2>
-      <TimesheetTable timesheets={timesheets} />
     </div>
   );
 };

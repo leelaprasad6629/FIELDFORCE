@@ -1,45 +1,43 @@
-import { useEffect, useState } from 'react';
-import { createClient } from '../lib/supabaseClient';
+import { Suspense } from 'react';
 import ClientList from '../components/ClientList';
 import ProjectCard from '../components/ProjectCard';
 import TeamMemberCard from '../components/TeamMemberCard';
 import TimesheetTable from '../components/TimesheetTable';
 
-const supabase = createClient();
-
 export default function Home() {
-  const [clients, setClients] = useState([]);
-  const [projects, setProjects] = useState([]);
-  const [teamMembers, setTeamMembers] = useState([]);
-  const [timesheets, setTimesheets] = useState([]);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      const { data: clientsData } = await supabase.from('clients').select('*');
-      const { data: projectsData } = await supabase.from('projects').select('*');
-      const { data: teamData } = await supabase.from('team').select('*');
-      const { data: timesheetData } = await supabase.from('timesheets').select('*');
-
-      setClients(clientsData);
-      setProjects(projectsData);
-      setTeamMembers(teamData);
-      setTimesheets(timesheetData);
-    };
-
-    fetchData();
-  }, []);
-
   return (
-    <div>
-      <h1>Welcome to FieldForce 360</h1>
-      <ClientList clients={clients} />
-      {projects.map(project => (
-        <ProjectCard key={project.id} project={project} />
-      ))}
-      {teamMembers.map(member => (
-        <TeamMemberCard key={member.id} member={member} />
-      ))}
-      <TimesheetTable timesheets={timesheets} />
+    <div className="min-h-screen p-8">
+      <h1 className="text-4xl font-bold mb-8">Welcome to FieldForce 360</h1>
+      
+      <div className="space-y-8">
+        <section>
+          <h2 className="text-2xl font-bold mb-4">Clients</h2>
+          <Suspense fallback={<div>Loading clients...</div>}>
+            <ClientList />
+          </Suspense>
+        </section>
+
+        <section>
+          <h2 className="text-2xl font-bold mb-4">Projects</h2>
+          <div className="grid gap-4">
+            <p className="text-gray-600">Projects will be displayed here</p>
+          </div>
+        </section>
+
+        <section>
+          <h2 className="text-2xl font-bold mb-4">Team Members</h2>
+          <div className="grid gap-4">
+            <p className="text-gray-600">Team members will be displayed here</p>
+          </div>
+        </section>
+
+        <section>
+          <h2 className="text-2xl font-bold mb-4">Timesheets</h2>
+          <Suspense fallback={<div>Loading timesheets...</div>}>
+            <TimesheetTable />
+          </Suspense>
+        </section>
+      </div>
     </div>
   );
 }

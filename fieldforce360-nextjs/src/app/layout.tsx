@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { ReactNode } from 'react';
 import './globals.css';
 import Navbar from '../components/Navbar';
 
-const Layout = ({ children }) => {
+const Layout = ({ children }: { children: ReactNode }) => {
     return (
         <html lang="en">
             <body>

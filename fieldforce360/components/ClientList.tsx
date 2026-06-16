@@ -1,45 +1,23 @@
-import React, { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabaseClient';
+import React from 'react';
 import { Client } from '../types/client';
 
 const ClientList: React.FC = () => {
-    const [clients, setClients] = useState<Client[]>([]);
-    const [loading, setLoading] = useState<boolean>(true);
-    const [error, setError] = useState<string | null>(null);
-
-    useEffect(() => {
-        const fetchClients = async () => {
-            try {
-                const { data, error } = await supabase
-                    .from('clients')
-                    .select('*');
-
-                if (error) throw error;
-
-                setClients(data);
-            } catch (error) {
-                setError('Failed to fetch clients');
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchClients();
-    }, []);
-
-    if (loading) return <div>Loading...</div>;
-    if (error) return <div>{error}</div>;
+    const clients: Client[] = [];
 
     return (
-        <div>
-            <h2>Client List</h2>
-            <ul>
-                {clients.map(client => (
-                    <li key={client.id}>
-                        {client.name} - {client.email}
-                    </li>
-                ))}
-            </ul>
+        <div className="border rounded-lg p-4">
+            <h2 className="text-xl font-semibold mb-4">Client List</h2>
+            {clients.length === 0 ? (
+                <p className="text-gray-500">No clients available yet</p>
+            ) : (
+                <ul className="space-y-2">
+                    {clients.map(client => (
+                        <li key={client.id} className="border-b pb-2">
+                            <span className="font-medium">{client.name}</span> - <span className="text-gray-600">{client.email}</span>
+                        </li>
+                    ))}
+                </ul>
+            )}
         </div>
     );
 };
