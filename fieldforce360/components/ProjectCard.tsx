@@ -7,11 +7,13 @@ interface ProjectCardProps {
 
 const ProjectCard: React.FC<ProjectCardProps> = ({ project }) => {
   return (
-    <div className="project-card">
-      <h3>{project.title}</h3>
-      <p>{project.description}</p>
-      <span>Status: {project.status}</span>
-      <span>Due Date: {project.dueDate}</span>
+    <div className="border rounded-lg p-4 shadow">
+      <h3 className="text-lg font-semibold">{project.name}</h3>
+      <p className="text-gray-600">{project.description}</p>
+      <div className="flex justify-between mt-4">
+        <span className="text-sm">Status: <span className="font-medium">{project.status}</span></span>
+        <span className="text-sm">End Date: <span className="font-medium">{new Date(project.endDate).toLocaleDateString()}</span></span>
+      </div>
     </div>
   );
 };

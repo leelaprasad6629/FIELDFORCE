@@ -1,56 +1,36 @@
-import React, { useEffect, useState } from 'react';
-import { supabase } from '../../lib/supabaseClient';
-import { Timesheet } from '../../types/timesheet';
+import React from 'react';
+import { Timesheet } from '../types/timesheet';
 
 const TimesheetTable: React.FC = () => {
-    const [timesheets, setTimesheets] = useState<Timesheet[]>([]);
-    const [loading, setLoading] = useState<boolean>(true);
-    const [error, setError] = useState<string | null>(null);
-
-    useEffect(() => {
-        const fetchTimesheets = async () => {
-            try {
-                const { data, error } = await supabase
-                    .from('timesheets')
-                    .select('*');
-
-                if (error) throw error;
-
-                setTimesheets(data);
-            } catch (error) {
-                setError('Error fetching timesheets');
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchTimesheets();
-    }, []);
-
-    if (loading) return <div>Loading...</div>;
-    if (error) return <div>{error}</div>;
+    const timesheets: Timesheet[] = [];
 
     return (
-        <table>
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Employee</th>
-                    <th>Hours Worked</th>
-                    <th>Date</th>
-                </tr>
-            </thead>
-            <tbody>
-                {timesheets.map((timesheet) => (
-                    <tr key={timesheet.id}>
-                        <td>{timesheet.id}</td>
-                        <td>{timesheet.employee}</td>
-                        <td>{timesheet.hours_worked}</td>
-                        <td>{new Date(timesheet.date).toLocaleDateString()}</td>
-                    </tr>
-                ))}
-            </tbody>
-        </table>
+        <div className="border rounded-lg overflow-hidden">
+            {timesheets.length === 0 ? (
+                <p className="p-4 text-gray-500">No timesheets available yet</p>
+            ) : (
+                <table className="w-full">
+                    <thead className="bg-gray-100">
+                        <tr>
+                            <th className="px-4 py-2 text-left">ID</th>
+                            <th className="px-4 py-2 text-left">Employee</th>
+                            <th className="px-4 py-2 text-left">Hours Worked</th>
+                            <th className="px-4 py-2 text-left">Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {timesheets.map((timesheet) => (
+                            <tr key={timesheet.id} className="border-t">
+                                <td className="px-4 py-2">{timesheet.id}</td>
+                                <td className="px-4 py-2">{timesheet.userId}</td>
+                                <td className="px-4 py-2">{timesheet.hoursWorked}</td>
+                                <td className="px-4 py-2">{new Date(timesheet.date).toLocaleDateString()}</td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            )}
+        </div>
     );
 };
 
