@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
-import { LayoutDashboard, MapPin, ClipboardList, BarChart3, HardHat, Zap } from "lucide-react";
+import { LayoutDashboard, MapPin, ClipboardList, BarChart3, HardHat, Star, Zap } from "lucide-react";
 import { homePathForRole, type UserRole } from "@/lib/roles";
 
 const allNavItems = [
@@ -12,6 +12,7 @@ const allNavItems = [
   { label: "Requests", href: "/requests", icon: ClipboardList, roles: ["manager"] as UserRole[] },
   { label: "Analytics", href: "/analytics", icon: BarChart3, roles: ["manager"] as UserRole[] },
   { label: "Technician", href: "/technician", icon: HardHat, roles: ["technician"] as UserRole[] },
+  { label: "Reviews", href: "/reviews", icon: Star, roles: ["manager"] as UserRole[] },
 ];
 
 export default function Sidebar() {

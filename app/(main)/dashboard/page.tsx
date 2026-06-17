@@ -6,6 +6,7 @@ import StatCards, { type DashboardStats } from "@/components/dashboard/StatCards
 import GoalBanner from "@/components/dashboard/GoalBanner";
 import TechnicianFlow, { type TechnicianData } from "@/components/dashboard/TechnicianFlow";
 import AlertFeed, { type AlertData } from "@/components/dashboard/AlertFeed";
+import ReviewsHighlight from "@/components/dashboard/ReviewsHighlight";
 
 const POLL_INTERVAL_MS = 20000;
 
@@ -53,6 +54,7 @@ export default function DashboardPage() {
           <TechnicianFlow technicians={technicians} loading={loading} />
           <AlertFeed alerts={alerts} loading={loading} />
         </div>
+        <ReviewsHighlight />
       </div>
     </div>
   );
