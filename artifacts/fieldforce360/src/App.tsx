@@ -67,7 +67,7 @@ function AppRoutes() {
           <div className="relative">
             <div className="absolute -top-20 -left-20 w-64 h-64 rounded-full opacity-20 blur-3xl pointer-events-none" style={{ background: "#06B6D4" }} />
             <div className="auth-clerk">
-              <SignIn routing="hash" afterSignInUrl="/dashboard" signUpUrl="/sign-up" />
+              <SignIn routing="hash" fallbackRedirectUrl="/dashboard" signUpUrl="/sign-up" />
             </div>
           </div>
         </div>
@@ -78,7 +78,7 @@ function AppRoutes() {
           <div className="relative">
             <div className="absolute -top-20 -right-20 w-64 h-64 rounded-full opacity-15 blur-3xl pointer-events-none" style={{ background: "#6366F1" }} />
             <div className="auth-clerk">
-              <SignUp routing="hash" afterSignUpUrl="/onboarding/role" signInUrl="/sign-in" />
+              <SignUp routing="hash" fallbackRedirectUrl="/onboarding/role" signInUrl="/sign-in" />
             </div>
           </div>
         </div>

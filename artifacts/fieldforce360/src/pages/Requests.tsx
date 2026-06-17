@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ClipboardList, Plus, Zap, RefreshCw, X, Loader2, CheckCircle, AlertTriangle } from "lucide-react";
+import { ClipboardList, Plus, Zap, RefreshCw, X, Loader2, CheckCircle, AlertTriangle, Users } from "lucide-react";
+import { Link } from "wouter";
 import { useApi } from "../lib/api";
 import { cn } from "../lib/utils";
 
@@ -27,10 +28,11 @@ export default function Requests() {
   const { fetchApi } = useApi();
   const [requests, setRequests] = useState<ServiceRequest[]>([]);
   const [assigning, setAssigning] = useState<string | null>(null);
+  const [assignError, setAssignError] = useState<{ id: string; msg: string } | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ title: "", description: "", customerName: "", category: "General", priority: "Medium", location: "" });
   const [creating, setCreating] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [createError, setCreateError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try { setRequests(await fetchApi<ServiceRequest[]>("/requests")); } catch { /* noop */ }
@@ -39,24 +41,28 @@ export default function Requests() {
   useEffect(() => { load(); }, [load]);
 
   async function assign(id: string) {
-    setAssigning(id); setError(null);
+    setAssigning(id); setAssignError(null);
     try {
       await fetchApi(`/requests/${id}/assign`, { method: "POST" });
       await load();
-    } catch (e: unknown) { setError(e instanceof Error ? e.message : "Assignment failed"); }
-    finally { setAssigning(null); }
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Assignment failed";
+      setAssignError({ id, msg });
+    } finally { setAssigning(null); }
   }
 
   async function create() {
-    setCreating(true); setError(null);
+    setCreating(true); setCreateError(null);
     try {
       await fetchApi("/requests", { method: "POST", body: JSON.stringify(form) });
       setShowForm(false);
       setForm({ title: "", description: "", customerName: "", category: "General", priority: "Medium", location: "" });
       await load();
-    } catch (e: unknown) { setError(e instanceof Error ? e.message : "Create failed"); }
+    } catch (e: unknown) { setCreateError(e instanceof Error ? e.message : "Create failed"); }
     finally { setCreating(false); }
   }
+
+  const noTechsError = assignError?.msg?.toLowerCase().includes("no idle");
 
   return (
     <div className="p-6 space-y-6 max-w-7xl">
@@ -75,16 +81,38 @@ export default function Requests() {
         </div>
       </div>
 
-      {error && (
+      {/* No-idle-technicians error with guidance */}
+      {noTechsError && (
+        <div className="glass border-amber-500/30 bg-amber-500/8 px-5 py-4 rounded-xl">
+          <div className="flex items-start gap-3">
+            <Users className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-amber-400 font-medium text-sm">No idle technicians available</p>
+              <p className="text-slate-400 text-xs mt-1 leading-relaxed">
+                Smart dispatch requires at least one technician with <span className="text-white">idle</span> status. Either add a technician on the Dashboard, or all current technicians are already on active jobs.
+              </p>
+              <Link href="/dashboard" className="inline-flex items-center gap-1.5 mt-2 text-xs text-cyan-400 hover:text-cyan-300 transition">
+                <Users className="w-3 h-3" /> Go to Dashboard → Add Technician
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Generic assign error */}
+      {assignError && !noTechsError && (
         <div className="glass border-rose-500/30 bg-rose-500/10 px-4 py-3 text-rose-400 text-sm rounded-xl flex items-center gap-2">
-          <AlertTriangle className="w-4 h-4 flex-shrink-0" /> {error}
+          <AlertTriangle className="w-4 h-4 flex-shrink-0" /> {assignError.msg}
         </div>
       )}
 
       {/* Request list */}
       <div className="space-y-3">
         {requests.length === 0 && (
-          <div className="glass p-12 text-center text-slate-500">No service requests yet. Create one or seed demo data.</div>
+          <div className="glass p-12 text-center">
+            <p className="text-slate-500 text-sm mb-2">No service requests yet.</p>
+            <p className="text-slate-600 text-xs">Click <span className="text-cyan-400">New Request</span> to create your first one.</p>
+          </div>
         )}
         {requests.map((r) => (
           <motion.div key={r._id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="glass glass-hover p-5 group">
@@ -102,15 +130,21 @@ export default function Requests() {
                   {r.assignedTechnicianName && <span>Assigned: <span className="text-cyan-400">{r.assignedTechnicianName}</span></span>}
                   {r.eta && <span>ETA: <span className="text-slate-400">{new Date(r.eta).toLocaleTimeString()}</span></span>}
                 </div>
+                {/* Per-card no-technician hint */}
+                {assignError?.id === r._id && noTechsError && (
+                  <p className="text-amber-400/70 text-xs mt-2">⚠ Add an idle technician on the Dashboard first.</p>
+                )}
               </div>
-              {r.status === "Pending" && (
-                <button onClick={() => assign(r._id)} disabled={assigning === r._id}
-                  className="flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-500/15 border border-indigo-500/30 text-indigo-400 text-sm hover:bg-indigo-500/25 transition disabled:opacity-50">
-                  {assigning === r._id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
-                  Smart Assign
-                </button>
-              )}
-              {r.status === "Completed" && <CheckCircle className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" />}
+              <div className="flex flex-col items-end gap-2">
+                {r.status === "Pending" && (
+                  <button onClick={() => assign(r._id)} disabled={assigning === r._id}
+                    className="flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-500/15 border border-indigo-500/30 text-indigo-400 text-sm hover:bg-indigo-500/25 transition disabled:opacity-50">
+                    {assigning === r._id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
+                    Smart Assign
+                  </button>
+                )}
+                {r.status === "Completed" && <CheckCircle className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" />}
+              </div>
             </div>
           </motion.div>
         ))}
@@ -124,7 +158,7 @@ export default function Requests() {
               className="glass w-full max-w-md p-6">
               <div className="flex items-center justify-between mb-5">
                 <h2 className="text-white font-bold text-lg">New Service Request</h2>
-                <button onClick={() => setShowForm(false)} className="text-slate-400 hover:text-white"><X className="w-5 h-5" /></button>
+                <button onClick={() => { setShowForm(false); setCreateError(null); }} className="text-slate-400 hover:text-white"><X className="w-5 h-5" /></button>
               </div>
               <div className="space-y-4">
                 {[
@@ -160,9 +194,9 @@ export default function Requests() {
                   </div>
                 </div>
               </div>
-              {error && <p className="text-rose-400 text-sm mt-3">{error}</p>}
+              {createError && <p className="text-rose-400 text-sm mt-3">{createError}</p>}
               <div className="flex gap-3 mt-6">
-                <button onClick={() => setShowForm(false)} className="flex-1 py-2.5 rounded-xl border border-white/10 text-slate-400 text-sm hover:bg-white/5">Cancel</button>
+                <button onClick={() => { setShowForm(false); setCreateError(null); }} className="flex-1 py-2.5 rounded-xl border border-white/10 text-slate-400 text-sm hover:bg-white/5">Cancel</button>
                 <button onClick={create} disabled={creating || !form.title || !form.customerName}
                   className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 text-white text-sm font-medium disabled:opacity-40 flex items-center justify-center gap-2">
                   {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : "Create Request"}

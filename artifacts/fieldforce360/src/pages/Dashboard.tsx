@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
-import { motion } from "framer-motion";
-import { Users, ClipboardList, Activity, Zap, Bell, AlertTriangle, Info, RefreshCw } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Users, ClipboardList, Activity, Zap, Bell, AlertTriangle, Info, RefreshCw, Plus, X, Loader2 } from "lucide-react";
 import { useApi } from "../lib/api";
 import { cn } from "../lib/utils";
 
@@ -18,6 +18,16 @@ const statusColors: Record<string, string> = {
 const alertIcon = { info: Info, warning: AlertTriangle, critical: AlertTriangle };
 const alertColor = { info: "text-cyan-400", warning: "text-amber-400", critical: "text-rose-400" };
 
+const ZONE_COORDS: Record<string, { lat: number; lng: number }> = {
+  "Zone Alpha": { lat: 40.72, lng: -74.01 },
+  "Zone Beta": { lat: 40.73, lng: -74.005 },
+  "Zone Delta": { lat: 40.74, lng: -73.99 },
+  "Depot HQ": { lat: 40.71, lng: -74.03 },
+  "Zone Bravo": { lat: 40.715, lng: -74.02 },
+};
+
+const emptyForm = { name: "", location: "Depot HQ", status: "idle" as string };
+
 export default function Dashboard() {
   const { fetchApi } = useApi();
   const [stats, setStats] = useState<Stats | null>(null);
@@ -25,6 +35,10 @@ export default function Dashboard() {
   const [technicians, setTechnicians] = useState<Technician[]>([]);
   const [seeding, setSeeding] = useState(false);
   const [seedMsg, setSeedMsg] = useState<string | null>(null);
+  const [showAddTech, setShowAddTech] = useState(false);
+  const [techForm, setTechForm] = useState(emptyForm);
+  const [addingTech, setAddingTech] = useState(false);
+  const [techError, setTechError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -34,7 +48,7 @@ export default function Dashboard() {
         fetchApi<Technician[]>("/technicians"),
       ]);
       setStats(s); setAlerts(a); setTechnicians(t);
-    } catch { /* will show empty state */ }
+    } catch { /* empty state shown */ }
   }, [fetchApi]);
 
   useEffect(() => { load(); }, [load]);
@@ -50,6 +64,23 @@ export default function Dashboard() {
     } finally { setSeeding(false); }
   }
 
+  async function addTechnician() {
+    if (!techForm.name.trim()) return;
+    setAddingTech(true); setTechError(null);
+    try {
+      const coords = ZONE_COORDS[techForm.location] ?? { lat: 40.7128 + (Math.random() - 0.5) * 0.05, lng: -74.006 + (Math.random() - 0.5) * 0.05 };
+      await fetchApi("/technicians", {
+        method: "POST",
+        body: JSON.stringify({ name: techForm.name.trim(), location: techForm.location, status: techForm.status, lat: coords.lat, lng: coords.lng }),
+      });
+      setShowAddTech(false);
+      setTechForm(emptyForm);
+      await load();
+    } catch (e: unknown) {
+      setTechError(e instanceof Error ? e.message : "Failed to add technician");
+    } finally { setAddingTech(false); }
+  }
+
   const statCards = [
     { label: "Open Requests", value: stats?.serviceRequests, icon: ClipboardList, color: "text-cyan-400", bg: "bg-cyan-500/10" },
     { label: "Active Technicians", value: stats?.activeTechnicians, icon: Users, color: "text-emerald-400", bg: "bg-emerald-500/10" },
@@ -60,14 +91,17 @@ export default function Dashboard() {
   return (
     <div className="p-6 space-y-6 max-w-7xl">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-white">Operations Dashboard</h1>
           <p className="text-slate-400 text-sm mt-1">Real-time overview of field operations</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <button onClick={load} className="flex items-center gap-2 px-4 py-2 rounded-lg border border-white/10 text-slate-400 text-sm hover:text-white hover:bg-white/5 transition">
             <RefreshCw className="w-4 h-4" /> Refresh
+          </button>
+          <button onClick={() => setShowAddTech(true)} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-sm hover:bg-emerald-500/25 transition">
+            <Plus className="w-4 h-4" /> Add Technician
           </button>
           <button onClick={seed} disabled={seeding} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-cyan-500/15 border border-cyan-500/30 text-cyan-400 text-sm hover:bg-cyan-500/25 transition disabled:opacity-50">
             {seeding ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
@@ -98,9 +132,17 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Technician status */}
         <div className="glass p-5">
-          <h2 className="text-white font-semibold mb-4 flex items-center gap-2"><Users className="w-4 h-4 text-cyan-400" /> Field Crew</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-white font-semibold flex items-center gap-2"><Users className="w-4 h-4 text-cyan-400" /> Field Crew ({technicians.length})</h2>
+            <button onClick={() => setShowAddTech(true)} className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/25 transition">
+              <Plus className="w-3 h-3" /> Add
+            </button>
+          </div>
           {technicians.length === 0 ? (
-            <p className="text-slate-500 text-sm text-center py-8">No technicians yet — seed demo data above.</p>
+            <div className="text-center py-8">
+              <p className="text-slate-500 text-sm mb-3">No technicians yet.</p>
+              <p className="text-slate-600 text-xs">Click <span className="text-emerald-400">Add Technician</span> to add your first field engineer, or use <span className="text-cyan-400">Seed Demo Data</span> to load sample data.</p>
+            </div>
           ) : (
             <div className="space-y-3">
               {technicians.map((t) => (
@@ -122,7 +164,7 @@ export default function Dashboard() {
         <div className="glass p-5">
           <h2 className="text-white font-semibold mb-4 flex items-center gap-2"><Bell className="w-4 h-4 text-indigo-400" /> Alert Feed</h2>
           {alerts.length === 0 ? (
-            <p className="text-slate-500 text-sm text-center py-8">No alerts yet.</p>
+            <p className="text-slate-500 text-sm text-center py-8">No alerts yet. Alerts appear here when dispatches happen.</p>
           ) : (
             <div className="space-y-3">
               {alerts.map((a) => {
@@ -141,6 +183,66 @@ export default function Dashboard() {
           )}
         </div>
       </div>
+
+      {/* Add Technician Modal */}
+      <AnimatePresence>
+        {showAddTech && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
+              className="glass w-full max-w-sm p-6">
+              <div className="flex items-center justify-between mb-5">
+                <h2 className="text-white font-bold text-lg">Add Technician</h2>
+                <button onClick={() => { setShowAddTech(false); setTechError(null); }} className="text-slate-400 hover:text-white">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <label className="text-slate-400 text-xs mb-1.5 block">Full Name *</label>
+                  <input
+                    value={techForm.name}
+                    onChange={(e) => setTechForm((f) => ({ ...f, name: e.target.value }))}
+                    placeholder="e.g. Alex Rivera"
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-cyan-500/50 placeholder:text-slate-600"
+                  />
+                </div>
+                <div>
+                  <label className="text-slate-400 text-xs mb-1.5 block">Zone / Location</label>
+                  <select
+                    value={techForm.location}
+                    onChange={(e) => setTechForm((f) => ({ ...f, location: e.target.value }))}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm focus:outline-none focus:border-cyan-500/50"
+                  >
+                    {Object.keys(ZONE_COORDS).map((z) => <option key={z} value={z}>{z}</option>)}
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-slate-400 text-xs mb-1.5 block">Initial Status</label>
+                  <select
+                    value={techForm.status}
+                    onChange={(e) => setTechForm((f) => ({ ...f, status: e.target.value }))}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm focus:outline-none focus:border-cyan-500/50"
+                  >
+                    <option value="idle">Idle (available for dispatch)</option>
+                    <option value="break">On Break</option>
+                  </select>
+                </div>
+              </div>
+              {techError && <p className="text-rose-400 text-sm mt-3">{techError}</p>}
+              <div className="flex gap-3 mt-6">
+                <button onClick={() => { setShowAddTech(false); setTechError(null); }} className="flex-1 py-2.5 rounded-xl border border-white/10 text-slate-400 text-sm hover:bg-white/5">
+                  Cancel
+                </button>
+                <button onClick={addTechnician} disabled={addingTech || !techForm.name.trim()}
+                  className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-600 text-white text-sm font-medium disabled:opacity-40 flex items-center justify-center gap-2">
+                  {addingTech ? <Loader2 className="w-4 h-4 animate-spin" /> : "Add Technician"}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
