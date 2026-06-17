@@ -10,17 +10,11 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
-const data = [
-  { day: "Mon", tasks: 42 },
-  { day: "Tue", tasks: 55 },
-  { day: "Wed", tasks: 49 },
-  { day: "Thu", tasks: 68 },
-  { day: "Fri", tasks: 61 },
-  { day: "Sat", tasks: 78 },
-  { day: "Sun", tasks: 85 },
-];
+interface VelocityChartProps {
+  data: { day: string; tasks: number }[];
+}
 
-function CustomTooltip({ active, payload, label }: any) {
+function CustomTooltip({ active, payload, label }: { active?: boolean; payload?: { value: number }[]; label?: string }) {
   if (active && payload && payload.length) {
     return (
       <div className="rounded-lg border border-white/10 bg-background/90 px-3 py-2 backdrop-blur-md">
@@ -32,7 +26,15 @@ function CustomTooltip({ active, payload, label }: any) {
   return null;
 }
 
-export default function VelocityChart() {
+export default function VelocityChart({ data }: VelocityChartProps) {
+  if (data.every((entry) => entry.tasks === 0)) {
+    return (
+      <div className="flex h-[240px] items-center justify-center rounded-xl border border-dashed border-white/10 text-sm text-zinc-500">
+        Not enough data yet
+      </div>
+    );
+  }
+
   return (
     <ResponsiveContainer width="100%" height={240}>
       <AreaChart data={data} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>

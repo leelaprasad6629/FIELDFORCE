@@ -6,10 +6,11 @@ import { ArrowUpRight, MapPin, Coffee } from "lucide-react";
 export interface TechnicianData {
   _id: string;
   name: string;
-  status: "active" | "idle" | "break";
+  status: "on-route" | "on-site" | "idle" | "break";
   currentTask?: string | null;
   location: string;
-  role: string;
+  lat?: number;
+  lng?: number;
 }
 
 interface TechnicianFlowProps {
@@ -28,12 +29,19 @@ function getInitials(name: string) {
 
 function getStatusDisplay(status: TechnicianData["status"]) {
   switch (status) {
-    case "active":
+    case "on-route":
       return {
         label: "On Route",
         badge: "bg-amber/15 text-amber ring-amber/30",
         icon: ArrowUpRight,
-        detail: (task: string | null | undefined) => task ?? "Active assignment",
+        detail: (task: string | null | undefined) => task ?? "En route to assignment",
+      };
+    case "on-site":
+      return {
+        label: "On Site",
+        badge: "bg-emerald/15 text-emerald ring-emerald/30",
+        icon: MapPin,
+        detail: (task: string | null | undefined) => task ?? "On site",
       };
     case "break":
       return {
@@ -90,7 +98,7 @@ export default function TechnicianFlow({ technicians, loading }: TechnicianFlowP
           Array.from({ length: 3 }).map((_, i) => <TechnicianSkeleton key={i} />)
         ) : technicians.length === 0 ? (
           <p className="rounded-xl border border-white/10 bg-white/[0.03] p-4 text-sm text-zinc-500">
-            No technicians found. Run <code className="text-cyan">GET /api/seed</code> to populate sample data.
+            No technicians are active right now.
           </p>
         ) : (
           technicians.map((tech, i) => {

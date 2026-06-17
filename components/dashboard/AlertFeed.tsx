@@ -52,7 +52,7 @@ export default function AlertFeed({ alerts, loading }: AlertFeedProps) {
           Array.from({ length: 5 }).map((_, i) => <AlertSkeleton key={i} />)
         ) : alerts.length === 0 ? (
           <p className="rounded-lg border border-white/10 bg-white/[0.03] p-3 text-sm text-zinc-500">
-            No alerts yet. Run <code className="text-cyan">GET /api/seed</code> to populate sample data.
+            No alerts to display yet.
           </p>
         ) : (
           <AnimatePresence initial={false}>

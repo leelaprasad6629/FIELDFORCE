@@ -2,6 +2,15 @@ import dbConnect from "@/lib/mongodb";
 import { Technician } from "@/models/Technician";
 import { Task } from "@/models/Task";
 import { Alert } from "@/models/Alert";
+import { ServiceRequest } from "@/models/ServiceRequest";
+
+const DEFAULT_CHECKLIST = [
+  "Inspect site entry and verify geofence",
+  "Confirm customer identity via photo verification",
+  "Run system diagnostics",
+  "Complete calibration or repair steps",
+  "Complete signature verification and close job",
+];
 
 export async function seedDatabase() {
   await dbConnect();
@@ -10,29 +19,62 @@ export async function seedDatabase() {
     Technician.deleteMany({}),
     Task.deleteMany({}),
     Alert.deleteMany({}),
+    ServiceRequest.deleteMany({}),
   ]);
 
   const technicians = await Technician.insertMany([
     {
       name: "Alex Rivera",
-      status: "active",
-      currentTask: "Task #104",
+      status: "on-route",
+      currentTask: "Transformer inspection",
       location: "Zone Alpha",
-      role: "Senior Field Technician",
+      lat: 40.72,
+      lng: -74.01,
     },
     {
       name: "Sarah Chen",
-      status: "active",
-      currentTask: "Geo-fenced Check-In",
+      status: "on-site",
+      currentTask: "HVAC calibration",
       location: "Client Zone Delta",
-      role: "Field Technician",
+      lat: 40.74,
+      lng: -73.99,
     },
     {
       name: "Marcus Vance",
-      status: "break",
+      status: "idle",
       currentTask: null,
       location: "Depot HQ",
-      role: "Field Technician",
+      lat: 40.71,
+      lng: -74.03,
+    },
+  ]);
+
+  const requests = await ServiceRequest.insertMany([
+    {
+      requestId: "REQ-1024",
+      title: "Transformer inspection",
+      description: "Customer reports intermittent power loss at warehouse.",
+      customerName: "Northwind Logistics",
+      category: "Electrical",
+      priority: "High",
+      status: "Pending",
+      location: "Warehouse 7",
+      geofenceLocation: { lat: 40.725, lng: -74.015, radiusKm: 5 },
+      eta: new Date(Date.now() + 3 * 60 * 60 * 1000),
+    },
+    {
+      requestId: "REQ-1138",
+      title: "HVAC calibration",
+      description: "Commercial center needs cooling system recalibration.",
+      customerName: "Summit Retail Group",
+      category: "HVAC",
+      priority: "Critical",
+      status: "Assigned",
+      location: "Client Zone Delta",
+      geofenceLocation: { lat: 40.738, lng: -73.992, radiusKm: 5 },
+      assignedTechnicianId: String(technicians[1]._id),
+      assignedTechnicianName: technicians[1].name,
+      eta: new Date(Date.now() + 90 * 60 * 1000),
     },
   ]);
 
@@ -40,42 +82,45 @@ export async function seedDatabase() {
     {
       taskId: "TSK-104",
       title: "Transformer inspection",
+      category: "Electrical",
       assignedTo: technicians[0].name,
+      assignedTechnicianId: String(technicians[0]._id),
+      serviceRequestId: String(requests[0]._id),
       status: "in-progress",
       zone: "Zone Alpha",
+      location: "Warehouse 7",
       priority: "high",
+      eta: new Date(Date.now() + 2 * 60 * 60 * 1000),
+      checklist: DEFAULT_CHECKLIST.map((label) => ({ label, done: false })),
     },
     {
       taskId: "TSK-105",
       title: "HVAC calibration",
+      category: "HVAC",
       assignedTo: technicians[1].name,
+      assignedTechnicianId: String(technicians[1]._id),
+      serviceRequestId: String(requests[1]._id),
       status: "in-progress",
       zone: "Client Zone Delta",
-      priority: "medium",
-    },
-    {
-      taskId: "TSK-106",
-      title: "Cable routing audit",
-      assignedTo: technicians[0].name,
-      status: "pending",
-      zone: "Zone Beta",
-      priority: "low",
-    },
-    {
-      taskId: "TSK-107",
-      title: "Emergency generator test",
-      assignedTo: technicians[2].name,
-      status: "pending",
-      zone: "Zone Gamma",
+      location: "Client Zone Delta",
       priority: "critical",
+      eta: new Date(Date.now() + 90 * 60 * 1000),
+      checklist: DEFAULT_CHECKLIST.map((label, index) => ({ label, done: index === 0 })),
     },
     {
       taskId: "TSK-108",
       title: "Panel replacement",
+      category: "Electrical",
       assignedTo: technicians[1].name,
+      assignedTechnicianId: String(technicians[1]._id),
       status: "completed",
       zone: "Client Zone Delta",
+      location: "Client Zone Delta",
       priority: "high",
+      createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
+      completedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+      eta: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000 - 30 * 60 * 1000),
+      checklist: DEFAULT_CHECKLIST.map((label) => ({ label, done: true })),
     },
   ]);
 
@@ -95,21 +140,12 @@ export async function seedDatabase() {
       timestamp: new Date(Date.now() - 20 * 60 * 1000),
       type: "warning",
     },
-    {
-      message: "Dispatch readiness recalculated: service windows on track",
-      timestamp: new Date(Date.now() - 35 * 60 * 1000),
-      type: "info",
-    },
-    {
-      message: "Critical task TSK-107 awaiting technician assignment",
-      timestamp: new Date(Date.now() - 45 * 60 * 1000),
-      type: "critical",
-    },
   ]);
 
   return {
     technicians: technicians.length,
-    tasks: 5,
-    alerts: 5,
+    tasks: 3,
+    alerts: 3,
+    serviceRequests: requests.length,
   };
 }

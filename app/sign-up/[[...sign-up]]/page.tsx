@@ -1,14 +1,14 @@
 import { SignUp } from "@clerk/nextjs";
+import clerkAppearance from "@/lib/clerk-appearance";
 
 export default function SignUpPage() {
   return (
     <SignUp
-      appearance={{
-        elements: {
-          rootBox: "mx-auto w-full",
-          card: "bg-transparent shadow-none",
-        },
-      }}
+      appearance={clerkAppearance}
+      routing="path"
+      path="/sign-up"
+      signInUrl="/sign-in"
+      fallbackRedirectUrl="/onboarding/role"
     />
   );
 }

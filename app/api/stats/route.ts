@@ -1,28 +1,38 @@
 import { NextResponse } from "next/server";
 import dbConnect from "@/lib/mongodb";
+import { requireApiUser } from "@/lib/auth";
 import { Task } from "@/models/Task";
 import { Technician } from "@/models/Technician";
+import { ServiceRequest } from "@/models/ServiceRequest";
 
 export async function GET() {
+  const authResult = await requireApiUser();
+  if (authResult instanceof NextResponse) return authResult;
+
   try {
     await dbConnect();
 
-    const [totalTasks, inProgressTasks, activeTechnicians, completedTasks] = await Promise.all([
-      Task.countDocuments(),
+    const [
+      openRequests,
+      activeTechnicians,
+      inProgressTasks,
+      totalTasks,
+      completedTasks,
+    ] = await Promise.all([
+      ServiceRequest.countDocuments({ status: { $in: ["Pending", "Assigned", "In-Progress"] } }),
+      Technician.countDocuments({ status: { $in: ["on-route", "on-site"] } }),
       Task.countDocuments({ status: "in-progress" }),
-      Technician.countDocuments({ status: "active" }),
+      Task.countDocuments(),
       Task.countDocuments({ status: "completed" }),
     ]);
 
-    const serviceRequests = totalTasks;
-    const taskOverview = inProgressTasks;
     const dispatchReadiness =
       totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
     return NextResponse.json({
-      serviceRequests,
+      serviceRequests: openRequests,
       activeTechnicians,
-      taskOverview,
+      taskOverview: inProgressTasks,
       dispatchReadiness,
     });
   } catch (error) {

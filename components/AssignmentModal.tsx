@@ -1,55 +1,115 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Zap, X, Sparkles, CheckCircle2, MapPin } from "lucide-react";
 
 interface AssignmentModalProps {
   request: {
     id: string;
+    _id?: string;
     title: string;
     status: string;
     priority: string;
-    assignedTechnicianId?: string;
+    assignedTechnicianId?: string | null;
+    assignedTechnicianName?: string | null;
+    geofenceLocation?: { lat: number; lng: number };
   };
-  onAssign: (id: string) => void;
+  onAssign: (id: string, technicianName: string) => void;
 }
 
-const mockTechnicians = [
-  { name: "Alex Rivera", score: 98, distance: 2.4, specialty: "Network Routing" },
-  { name: "Sarah Chen", score: 94, distance: 3.1, specialty: "Geo-fence Verification" },
-  { name: "Marcus Vance", score: 90, distance: 4.8, specialty: "Critical Repairs" },
-];
+interface TechnicianOption {
+  _id: string;
+  name: string;
+  lat: number;
+  lng: number;
+  status: string;
+}
+
+function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number) {
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
 
 export default function AssignmentModal({ request, onAssign }: AssignmentModalProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [matchReady, setMatchReady] = useState(false);
-  const selected = useMemo(() => mockTechnicians[0], []);
+  const [isSaving, setIsSaving] = useState(false);
+  const [selected, setSelected] = useState<{ name: string; distanceKm: number; score: number } | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isOpen) {
       setIsAnalyzing(false);
       setMatchReady(false);
+      setSelected(null);
+      setError(null);
+      setIsSaving(false);
     }
   }, [isOpen]);
 
-  const openDialog = () => {
+  const openDialog = async () => {
     setIsOpen(true);
     setIsAnalyzing(true);
     setMatchReady(false);
-    window.setTimeout(() => {
+    setError(null);
+
+    try {
+      const res = await fetch("/api/technicians");
+      const technicians = (await res.json()) as TechnicianOption[];
+      const idle = technicians.filter((tech) => tech.status === "idle");
+      if (idle.length === 0) {
+        throw new Error("No idle technicians available");
+      }
+
+      const target = request.geofenceLocation ?? { lat: 40.7128, lng: -74.006 };
+      const ranked = idle
+        .map((tech) => ({
+          tech,
+          distance: haversineKm(target.lat, target.lng, tech.lat, tech.lng),
+        }))
+        .sort((a, b) => a.distance - b.distance);
+
+      const best = ranked[0];
+      setSelected({
+        name: best.tech.name,
+        distanceKm: best.distance,
+        score: Math.max(85, Math.round(100 - best.distance * 2)),
+      });
       setIsAnalyzing(false);
       setMatchReady(true);
-    }, 1600);
+    } catch (err) {
+      setIsAnalyzing(false);
+      setError(err instanceof Error ? err.message : "Assignment preview failed");
+    }
   };
 
-  const approveDispatch = () => {
-    onAssign(request.id);
-    setIsOpen(false);
+  const approveDispatch = async () => {
+    if (!request._id) return;
+    setIsSaving(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/requests/${request._id}/assign`, { method: "POST" });
+      const payload = await res.json();
+      if (!res.ok) {
+        throw new Error(payload.error ?? "Assignment failed");
+      }
+      onAssign(request.id, payload.technician.name);
+      setIsOpen(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Assignment failed");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const assigned = request.status === "Assigned";
+  const assigned = request.status === "Assigned" || request.status === "In-Progress" || request.status === "Completed";
 
   return (
     <>
@@ -102,7 +162,9 @@ export default function AssignmentModal({ request, onAssign }: AssignmentModalPr
                   </span>
                   <div>
                     <h2 className="text-lg font-bold text-white">Smart AI Assignment</h2>
-                    <p className="text-sm text-zinc-400">{request.id} · {request.title}</p>
+                    <p className="text-sm text-zinc-400">
+                      {request.id} · {request.title}
+                    </p>
                   </div>
                 </div>
                 <button
@@ -124,7 +186,9 @@ export default function AssignmentModal({ request, onAssign }: AssignmentModalPr
                   </div>
                 )}
 
-                {matchReady && (
+                {error && <p className="py-4 text-center text-sm text-rose">{error}</p>}
+
+                {matchReady && selected && (
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -135,7 +199,7 @@ export default function AssignmentModal({ request, onAssign }: AssignmentModalPr
                         <div>
                           <p className="text-xs uppercase tracking-wide text-cyan/80">Best match recommended</p>
                           <p className="mt-1 text-lg font-bold text-white">{selected.name}</p>
-                          <p className="text-sm text-zinc-400">{selected.specialty}</p>
+                          <p className="text-sm text-zinc-400">Nearest idle technician</p>
                         </div>
                         <span className="rounded-full bg-emerald/15 px-3 py-1 text-xs font-bold text-emerald ring-1 ring-emerald/30">
                           {selected.score}% Match
@@ -143,7 +207,7 @@ export default function AssignmentModal({ request, onAssign }: AssignmentModalPr
                       </div>
                       <div className="mt-4 flex items-center gap-2 text-sm text-zinc-300">
                         <MapPin className="h-4 w-4 text-cyan" />
-                        {selected.distance.toFixed(1)} km away
+                        {selected.distanceKm.toFixed(1)} km away
                       </div>
                     </div>
 
@@ -152,10 +216,11 @@ export default function AssignmentModal({ request, onAssign }: AssignmentModalPr
                         type="button"
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
+                        disabled={isSaving}
                         onClick={approveDispatch}
-                        className="rounded-xl bg-emerald px-4 py-3 text-sm font-semibold text-white shadow-[0_0_30px_rgba(16,185,129,0.25)]"
+                        className="rounded-xl bg-emerald px-4 py-3 text-sm font-semibold text-white shadow-[0_0_30px_rgba(16,185,129,0.25)] disabled:opacity-60"
                       >
-                        Approve Dispatch
+                        {isSaving ? "Dispatching..." : "Approve Dispatch"}
                       </motion.button>
                       <button
                         type="button"

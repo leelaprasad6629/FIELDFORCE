@@ -43,6 +43,48 @@ select {
   border-radius: 1rem;
 }
 
+/* Clerk auth shell — solid panel so form text stays readable */
+.auth-clerk {
+  color: #ffffff;
+  isolation: isolate;
+  overflow: visible;
+  background-color: rgba(11, 16, 24, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.auth-clerk .cl-rootBox,
+.auth-clerk .cl-card,
+.auth-clerk .cl-main {
+  color: #ffffff;
+}
+
+.auth-clerk label,
+.auth-clerk p,
+.auth-clerk span,
+.auth-clerk h1,
+.auth-clerk h2,
+.auth-clerk h3 {
+  color: inherit;
+}
+
+.auth-clerk input,
+.auth-clerk select,
+.auth-clerk textarea {
+  color: #ffffff;
+  background-color: #121a28;
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.auth-clerk input::placeholder {
+  color: #94a3b8;
+}
+
+/* Cloudflare Turnstile (Clerk bot protection) needs visible iframe space */
+.auth-clerk iframe {
+  min-height: 65px;
+  color-scheme: normal;
+}
+
 .glass-hover {
   transition: box-shadow 0.25s ease, border-color 0.25s ease, transform 0.25s ease;
 }

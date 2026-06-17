@@ -11,15 +11,11 @@ import {
   Cell,
 } from "recharts";
 
-const data = [
-  { day: "Mon", delay: 1.2 },
-  { day: "Tue", delay: 2.4 },
-  { day: "Wed", delay: 3.0 },
-  { day: "Thu", delay: 1.8 },
-  { day: "Fri", delay: 2.8 },
-];
+interface DelayChartProps {
+  data: { day: string; delay: number | null }[];
+}
 
-function CustomTooltip({ active, payload, label }: any) {
+function CustomTooltip({ active, payload, label }: { active?: boolean; payload?: { value: number }[]; label?: string }) {
   if (active && payload && payload.length) {
     return (
       <div className="rounded-lg border border-white/10 bg-background/90 px-3 py-2 backdrop-blur-md">
@@ -31,16 +27,26 @@ function CustomTooltip({ active, payload, label }: any) {
   return null;
 }
 
-export default function DelayChart() {
+export default function DelayChart({ data }: DelayChartProps) {
+  const chartData = data.filter((entry) => entry.delay !== null) as { day: string; delay: number }[];
+
+  if (chartData.length === 0) {
+    return (
+      <div className="flex h-[240px] items-center justify-center rounded-xl border border-dashed border-white/10 text-sm text-zinc-500">
+        Not enough data yet
+      </div>
+    );
+  }
+
   return (
     <ResponsiveContainer width="100%" height={240}>
-      <BarChart data={data} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
+      <BarChart data={chartData} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
         <XAxis dataKey="day" stroke="#71717a" fontSize={12} tickLine={false} axisLine={false} />
         <YAxis stroke="#71717a" fontSize={12} tickLine={false} axisLine={false} unit="h" />
         <Tooltip cursor={{ fill: "rgba(99,102,241,0.08)" }} content={<CustomTooltip />} />
         <Bar dataKey="delay" radius={[6, 6, 0, 0]} animationDuration={1200}>
-          {data.map((_, i) => (
+          {chartData.map((_, i) => (
             <Cell key={i} fill="#06B6D4" />
           ))}
         </Bar>
