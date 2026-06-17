@@ -1,6 +1,7 @@
 import { Router } from "express";
 import type { Request, Response } from "express";
 import dbConnect from "../../models/mongodb.js";
+import { requireManagerApi } from "../../lib/clerkAuth.js";
 import { Technician } from "../../models/Technician.js";
 import { Task } from "../../models/Task.js";
 import { Alert } from "../../models/Alert.js";
@@ -17,6 +18,8 @@ const DEFAULT_CHECKLIST = [
 ];
 
 router.post("/seed", async (req: Request, res: Response) => {
+  const auth = await requireManagerApi(req, res);
+  if (!auth) return;
   try {
     await dbConnect();
     await Promise.all([Technician.deleteMany({}), Task.deleteMany({}), Alert.deleteMany({}), ServiceRequest.deleteMany({})]);
