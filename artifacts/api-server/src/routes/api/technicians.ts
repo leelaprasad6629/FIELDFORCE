@@ -16,6 +16,8 @@ function serialize(doc: Record<string, unknown>) {
     lat: doc.lat,
     lng: doc.lng,
     clerkUserId: doc.clerkUserId ?? null,
+    email: doc.email ?? null,
+    phone: doc.phone ?? null,
   };
 }
 
@@ -37,9 +39,15 @@ router.post("/technicians", async (req: Request, res: Response) => {
   if (!auth) return;
   try {
     await dbConnect();
-    const { name, location, status, currentTask, lat, lng, clerkUserId } = req.body;
+    const { name, location, status, currentTask, lat, lng, clerkUserId, email, phone } = req.body;
     if (!name || !location) { res.status(400).json({ error: "name and location are required" }); return; }
-    const technician = await Technician.create({ name, status: status ?? "idle", currentTask: currentTask ?? null, location, lat: lat ?? 40.7128, lng: lng ?? -74.006, clerkUserId: clerkUserId ?? null });
+    const technician = await Technician.create({
+      name, status: status ?? "idle", currentTask: currentTask ?? null,
+      location, lat: lat ?? 40.7128, lng: lng ?? -74.006,
+      clerkUserId: clerkUserId ?? null,
+      email: email ?? null,
+      phone: phone ?? null,
+    });
     res.status(201).json(serialize(technician.toObject() as Record<string, unknown>));
   } catch (error) {
     req.log.error({ error }, "POST /api/technicians error");
@@ -57,13 +65,15 @@ router.patch("/technicians/:id", async (req: Request, res: Response) => {
     if (auth.role === "technician" && technician.clerkUserId && technician.clerkUserId !== auth.userId) {
       res.status(403).json({ error: "Forbidden" }); return;
     }
-    const { status, lat, lng, location, currentTask } = req.body;
+    const { status, lat, lng, location, currentTask, email, phone } = req.body;
     const VALID = ["on-route", "on-site", "idle", "break"];
     if (status && VALID.includes(status)) technician.status = status;
     if (typeof lat === "number") technician.lat = lat;
     if (typeof lng === "number") technician.lng = lng;
     if (location) technician.location = location;
     if (currentTask !== undefined) technician.currentTask = currentTask;
+    if (email !== undefined) technician.email = email;
+    if (phone !== undefined) technician.phone = phone;
     await technician.save();
     res.json(serialize(technician.toObject() as Record<string, unknown>));
   } catch (error) {

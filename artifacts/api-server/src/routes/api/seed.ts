@@ -24,9 +24,9 @@ router.post("/seed", async (req: Request, res: Response) => {
     await dbConnect();
     await Promise.all([Technician.deleteMany({}), Task.deleteMany({}), Alert.deleteMany({}), ServiceRequest.deleteMany({})]);
     const technicians = await Technician.insertMany([
-      { name: "Alex Rivera", status: "on-route", currentTask: "Transformer inspection", location: "Zone Alpha", lat: 40.72, lng: -74.01 },
-      { name: "Sarah Chen", status: "on-site", currentTask: "HVAC calibration", location: "Client Zone Delta", lat: 40.74, lng: -73.99 },
-      { name: "Marcus Vance", status: "idle", currentTask: null, location: "Depot HQ", lat: 40.71, lng: -74.03 },
+      { name: "Alex Rivera", email: "alex.rivera@fieldforce360.app", status: "on-route", currentTask: "Transformer inspection", location: "Zone Alpha", lat: 40.72, lng: -74.01 },
+      { name: "Sarah Chen", email: "sarah.chen@fieldforce360.app", status: "on-site", currentTask: "HVAC calibration", location: "Client Zone Delta", lat: 40.74, lng: -73.99 },
+      { name: "Marcus Vance", email: "marcus.vance@fieldforce360.app", status: "idle", currentTask: null, location: "Depot HQ", lat: 40.71, lng: -74.03 },
     ]);
     await ServiceRequest.insertMany([
       { requestId: "REQ-1024", title: "Transformer inspection", description: "Customer reports intermittent power loss at warehouse.", customerName: "Northwind Logistics", category: "Electrical", priority: "High", status: "Assigned", location: "Warehouse 7", geofenceLocation: { lat: 40.725, lng: -74.015, radiusKm: 5 }, assignedTechnicianId: String(technicians[0]._id), assignedTechnicianName: technicians[0].name, eta: new Date(Date.now() + 3 * 60 * 60 * 1000) },

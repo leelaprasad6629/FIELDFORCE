@@ -26,7 +26,7 @@ const ZONE_COORDS: Record<string, { lat: number; lng: number }> = {
   "Zone Bravo": { lat: 40.715, lng: -74.02 },
 };
 
-const emptyForm = { name: "", location: "Depot HQ", status: "idle" as string };
+const emptyForm = { name: "", email: "", location: "Depot HQ", status: "idle" as string };
 
 export default function Dashboard() {
   const { fetchApi } = useApi();
@@ -71,7 +71,7 @@ export default function Dashboard() {
       const coords = ZONE_COORDS[techForm.location] ?? { lat: 40.7128 + (Math.random() - 0.5) * 0.05, lng: -74.006 + (Math.random() - 0.5) * 0.05 };
       await fetchApi("/technicians", {
         method: "POST",
-        body: JSON.stringify({ name: techForm.name.trim(), location: techForm.location, status: techForm.status, lat: coords.lat, lng: coords.lng }),
+        body: JSON.stringify({ name: techForm.name.trim(), email: techForm.email.trim() || null, location: techForm.location, status: techForm.status, lat: coords.lat, lng: coords.lng }),
       });
       setShowAddTech(false);
       setTechForm(emptyForm);
@@ -203,6 +203,16 @@ export default function Dashboard() {
                     value={techForm.name}
                     onChange={(e) => setTechForm((f) => ({ ...f, name: e.target.value }))}
                     placeholder="e.g. Alex Rivera"
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-cyan-500/50 placeholder:text-slate-600"
+                  />
+                </div>
+                <div>
+                  <label className="text-slate-400 text-xs mb-1.5 block">Email <span className="text-slate-600">(for dispatch notifications)</span></label>
+                  <input
+                    type="email"
+                    value={techForm.email}
+                    onChange={(e) => setTechForm((f) => ({ ...f, email: e.target.value }))}
+                    placeholder="e.g. alex@yourcompany.com"
                     className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-cyan-500/50 placeholder:text-slate-600"
                   />
                 </div>

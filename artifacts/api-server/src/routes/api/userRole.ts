@@ -16,12 +16,21 @@ router.post("/user/role", async (req: Request, res: Response) => {
   try {
     const user = await clerkClient.users.getUser(userId);
     const displayName = [user.firstName, user.lastName].filter(Boolean).join(" ") || user.username || "Field User";
+    const primaryEmail = user.emailAddresses.find((e) => e.id === user.primaryEmailAddressId)?.emailAddress ?? null;
     await clerkClient.users.updateUserMetadata(userId, { publicMetadata: { role } });
     if (role === "technician") {
       await dbConnect();
       const existing = await Technician.findOne({ clerkUserId: userId });
       if (!existing) {
-        await Technician.create({ name: displayName, status: "idle", location: "Depot HQ", clerkUserId: userId, lat: 40.7128, lng: -74.006 });
+        await Technician.create({
+          name: displayName,
+          status: "idle",
+          location: "Depot HQ",
+          clerkUserId: userId,
+          lat: 40.7128,
+          lng: -74.006,
+          email: primaryEmail,
+        });
       }
     }
     res.json({ role });

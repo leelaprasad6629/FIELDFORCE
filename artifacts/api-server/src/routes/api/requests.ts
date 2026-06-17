@@ -7,6 +7,7 @@ import { Technician } from "../../models/Technician.js";
 import { Task } from "../../models/Task.js";
 import { Alert } from "../../models/Alert.js";
 import { haversineKm } from "../../lib/distance.js";
+import { sendDispatchEmail } from "../../lib/notifications.js";
 
 const router = Router();
 
@@ -108,10 +109,31 @@ router.post("/requests/:id/assign", async (req: Request, res: Response) => {
       checklist: DEFAULT_CHECKLIST.map((label) => ({ label, done: false })),
     });
     await Alert.create({ message: `Smart dispatch assigned ${technician.name} to ${serviceRequest.requestId}`, timestamp: new Date(), type: "info" });
+
+    // Fire dispatch email notification (non-blocking — don't fail assign on email error)
+    const notifResult = await sendDispatchEmail({
+      technicianName: technician.name,
+      technicianEmail: technician.email ?? null,
+      requestTitle: serviceRequest.title,
+      requestId: serviceRequest.requestId,
+      customerName: serviceRequest.customerName,
+      location: serviceRequest.location,
+      priority: serviceRequest.priority,
+      category: serviceRequest.category,
+      etaDate: eta,
+      distanceKm: Number(match.distance.toFixed(1)),
+    });
+    if (!notifResult.sent) {
+      req.log.warn({ reason: notifResult.error }, "Dispatch email not sent");
+    } else {
+      req.log.info({ technicianId: String(technician._id) }, "Dispatch email sent");
+    }
+
     res.json({
       request: serializeRequest(serviceRequest.toObject() as Record<string, unknown>),
       technician: { _id: String(technician._id), name: technician.name, distanceKm: Number(match.distance.toFixed(1)), score: Math.max(85, Math.round(100 - match.distance * 2)) },
       taskId: task.taskId,
+      notification: notifResult,
     });
   } catch (error) {
     req.log.error({ error }, "POST /api/requests/:id/assign error");

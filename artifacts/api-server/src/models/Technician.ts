@@ -10,6 +10,8 @@ export interface ITechnician extends Document {
   lat: number;
   lng: number;
   clerkUserId?: string | null;
+  email?: string | null;
+  phone?: string | null;
 }
 
 const TechnicianSchema = new Schema<ITechnician>({
@@ -20,6 +22,8 @@ const TechnicianSchema = new Schema<ITechnician>({
   lat: { type: Number, required: true, default: 40.7128 },
   lng: { type: Number, required: true, default: -74.006 },
   clerkUserId: { type: String, default: null, index: true },
+  email: { type: String, default: null },
+  phone: { type: String, default: null },
 });
 
 export const Technician: Model<ITechnician> =
