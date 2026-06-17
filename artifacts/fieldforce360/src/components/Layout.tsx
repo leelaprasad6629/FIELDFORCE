@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { useRole } from "../hooks/useRole";
 import { UserButton } from "@clerk/clerk-react";
-import { LayoutDashboard, Map, ClipboardList, BarChart2, UserSquare2, Menu, X, Zap } from "lucide-react";
+import { LayoutDashboard, Map, ClipboardList, BarChart2, UserSquare2, Menu, X, Zap, DollarSign } from "lucide-react";
 import { useState } from "react";
 import { cn } from "../lib/utils";
 
@@ -10,6 +10,7 @@ const managerNav = [
   { label: "Map", icon: Map, href: "/map" },
   { label: "Requests", icon: ClipboardList, href: "/requests" },
   { label: "Analytics", icon: BarChart2, href: "/analytics" },
+  { label: "Expenses", icon: DollarSign, href: "/expenses" },
 ];
 
 const technicianNav = [
@@ -36,9 +37,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </div>
           <span className="text-white font-bold text-lg tracking-tight">FieldForce<span className="text-cyan-400">360</span></span>
         </div>
-        <nav className="flex-1 py-4 px-3 space-y-1">
+        <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
           {navItems.map(({ label, icon: Icon, href }) => (
-            <Link key={href} href={href} className={cn(
+            <Link key={href} href={href} onClick={() => setMobileOpen(false)} className={cn(
               "flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 no-underline",
               location === href
                 ? "bg-cyan-500/15 text-cyan-400 border border-cyan-500/30"
@@ -53,7 +54,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <div className="flex items-center gap-3">
             <UserButton afterSignOutUrl="/" />
             <div className="min-w-0">
-              <p className="text-xs text-slate-400 capitalize">{role ?? "user"}</p>
+              <p className="text-white text-sm font-medium truncate">{role === "manager" ? "Manager" : "Technician"}</p>
+              <p className="text-xs text-slate-500 capitalize">FieldForce360</p>
             </div>
           </div>
         </div>

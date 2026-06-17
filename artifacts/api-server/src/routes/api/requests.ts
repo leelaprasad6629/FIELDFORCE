@@ -70,10 +70,52 @@ router.post("/requests", async (req: Request, res: Response) => {
       geofenceLocation: geofenceLocation ?? { lat: 40.7128 + (Math.random() - 0.5) * 0.08, lng: -74.006 + (Math.random() - 0.5) * 0.08, radiusKm: 5 },
       eta: eta ? new Date(eta) : new Date(Date.now() + 2 * 60 * 60 * 1000),
     });
+    await Alert.create({ message: `New service request created: ${title} (${category})`, timestamp: new Date(), type: "info" });
     res.status(201).json(serializeRequest(request.toObject() as Record<string, unknown>));
   } catch (error) {
     req.log.error({ error }, "POST /api/requests error");
     res.status(500).json({ error: "Failed to create request" });
+  }
+});
+
+router.patch("/requests/:id", async (req: Request, res: Response) => {
+  const auth = await requireManagerApi(req, res);
+  if (!auth) return;
+  try {
+    await dbConnect();
+    const serviceRequest = await ServiceRequest.findById(req.params.id);
+    if (!serviceRequest) { res.status(404).json({ error: "Request not found" }); return; }
+    const { status, priority, description } = req.body;
+    const VALID_STATUS = ["Pending", "Assigned", "In-Progress", "Completed", "Cancelled"];
+    if (status && VALID_STATUS.includes(status)) {
+      serviceRequest.status = status;
+      if (status === "Completed") serviceRequest.completedAt = new Date();
+    }
+    if (priority) serviceRequest.priority = priority;
+    if (description) serviceRequest.description = description;
+    await serviceRequest.save();
+    res.json(serializeRequest(serviceRequest.toObject() as Record<string, unknown>));
+  } catch (error) {
+    req.log.error({ error }, "PATCH /api/requests/:id error");
+    res.status(500).json({ error: "Failed to update request" });
+  }
+});
+
+router.delete("/requests/:id", async (req: Request, res: Response) => {
+  const auth = await requireManagerApi(req, res);
+  if (!auth) return;
+  try {
+    await dbConnect();
+    const serviceRequest = await ServiceRequest.findById(req.params.id);
+    if (!serviceRequest) { res.status(404).json({ error: "Request not found" }); return; }
+    if (serviceRequest.status === "Assigned" || serviceRequest.status === "In-Progress") {
+      res.status(400).json({ error: "Cannot delete an active request. Cancel it first." }); return;
+    }
+    await ServiceRequest.deleteOne({ _id: req.params.id });
+    res.json({ ok: true });
+  } catch (error) {
+    req.log.error({ error }, "DELETE /api/requests/:id error");
+    res.status(500).json({ error: "Failed to delete request" });
   }
 });
 
@@ -111,7 +153,7 @@ router.post("/requests/:id/assign", async (req: Request, res: Response) => {
       priority: serviceRequest.priority.toLowerCase(), eta,
       checklist: DEFAULT_CHECKLIST.map((label) => ({ label, done: false })),
     });
-    await Alert.create({ message: `Smart dispatch assigned ${technician.name} to ${serviceRequest.requestId}`, timestamp: new Date(), type: "info" });
+    await Alert.create({ message: `Smart dispatch assigned ${technician.name} to "${serviceRequest.title}" (${serviceRequest.requestId})`, timestamp: new Date(), type: "info" });
 
     const notifResult = await sendDispatchEmail({
       technicianName: technician.name,

@@ -1,6 +1,8 @@
 import { Switch, Route, Router as WouterRouter, useLocation, Redirect } from "wouter";
 import { ClerkProvider, SignIn, SignUp, useAuth, useUser } from "@clerk/clerk-react";
+import { AnimatePresence, motion } from "framer-motion";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useState } from "react";
 import { useRole } from "./hooks/useRole";
 import Layout from "./components/Layout";
 import Landing from "./pages/Landing";
@@ -10,9 +12,67 @@ import MapPage from "./pages/MapPage";
 import Requests from "./pages/Requests";
 import Analytics from "./pages/Analytics";
 import TechnicianView from "./pages/TechnicianView";
+import Expenses from "./pages/Expenses";
 
 const queryClient = new QueryClient();
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
+
+// Modal backdrop + slide-in for auth modals
+const backdrop = { hidden: { opacity: 0 }, visible: { opacity: 1 }, exit: { opacity: 0 } };
+const modal = { hidden: { opacity: 0, y: 24, scale: 0.97 }, visible: { opacity: 1, y: 0, scale: 1 }, exit: { opacity: 0, y: 12, scale: 0.97 } };
+
+function AuthModal({ view, onClose }: { view: "sign-in" | "sign-up"; onClose: () => void }) {
+  return (
+    <AnimatePresence>
+      <motion.div
+        key="backdrop"
+        variants={backdrop}
+        initial="hidden" animate="visible" exit="exit"
+        transition={{ duration: 0.2 }}
+        className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+        <motion.div
+          key="modal"
+          variants={modal}
+          initial="hidden" animate="visible" exit="exit"
+          transition={{ type: "spring", duration: 0.35, bounce: 0.2 }}
+          className="pointer-events-auto"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {view === "sign-in"
+            ? <SignIn routing="hash" afterSignInUrl="/dashboard" signUpUrl="#sign-up" />
+            : <SignUp routing="hash" afterSignUpUrl="/onboarding/role" signInUrl="#sign-in" />
+          }
+        </motion.div>
+      </div>
+    </AnimatePresence>
+  );
+}
+
+function PublicLanding() {
+  const { isSignedIn, isLoaded } = useAuth();
+  const [authView, setAuthView] = useState<"sign-in" | "sign-up" | null>(null);
+
+  if (!isLoaded) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ background: "#080C14" }}>
+        <div className="w-8 h-8 border-2 border-cyan-500/40 border-t-cyan-500 rounded-full animate-spin" />
+      </div>
+    );
+  }
+  if (isSignedIn) return <Redirect to="/dashboard" />;
+
+  return (
+    <>
+      <Landing onSignIn={() => setAuthView("sign-in")} onSignUp={() => setAuthView("sign-up")} />
+      {authView && (
+        <AuthModal view={authView} onClose={() => setAuthView(null)} />
+      )}
+    </>
+  );
+}
 
 function AuthGate({ children }: { children: React.ReactNode }) {
   const { isLoaded, isSignedIn } = useAuth();
@@ -30,7 +90,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   if (!isSignedIn) return <Redirect to="/" />;
 
   const role = user?.publicMetadata?.role as string | undefined;
-  const publicPaths = ["/", "/sign-in", "/sign-up", "/onboarding/role"];
+  const publicPaths = ["/", "/onboarding/role"];
   if (!role && !publicPaths.includes(location)) {
     return <Redirect to="/onboarding/role" />;
   }
@@ -54,34 +114,10 @@ function TechnicianOnly({ children }: { children: React.ReactNode }) {
 }
 
 function AppRoutes() {
-  const { isSignedIn } = useAuth();
-
   return (
     <Switch>
       <Route path="/">
-        {isSignedIn ? <Redirect to="/dashboard" /> : <Landing />}
-      </Route>
-
-      <Route path="/sign-in">
-        <div className="min-h-screen flex items-center justify-center px-4" style={{ background: "#080C14" }}>
-          <div className="relative">
-            <div className="absolute -top-20 -left-20 w-64 h-64 rounded-full opacity-20 blur-3xl pointer-events-none" style={{ background: "#06B6D4" }} />
-            <div className="auth-clerk">
-              <SignIn routing="hash" fallbackRedirectUrl="/dashboard" signUpUrl="/sign-up" />
-            </div>
-          </div>
-        </div>
-      </Route>
-
-      <Route path="/sign-up">
-        <div className="min-h-screen flex items-center justify-center px-4" style={{ background: "#080C14" }}>
-          <div className="relative">
-            <div className="absolute -top-20 -right-20 w-64 h-64 rounded-full opacity-15 blur-3xl pointer-events-none" style={{ background: "#6366F1" }} />
-            <div className="auth-clerk">
-              <SignUp routing="hash" fallbackRedirectUrl="/onboarding/role" signInUrl="/sign-in" />
-            </div>
-          </div>
-        </div>
+        <PublicLanding />
       </Route>
 
       <Route path="/onboarding/role">
@@ -128,6 +164,16 @@ function AppRoutes() {
         </AuthGate>
       </Route>
 
+      <Route path="/expenses">
+        <AuthGate>
+          <ManagerOnly>
+            <Layout>
+              <Expenses />
+            </Layout>
+          </ManagerOnly>
+        </AuthGate>
+      </Route>
+
       <Route path="/technician">
         <AuthGate>
           <TechnicianOnly>
@@ -163,7 +209,7 @@ function App() {
   }
 
   return (
-    <ClerkProvider publishableKey={PUBLISHABLE_KEY}>
+    <ClerkProvider publishableKey={PUBLISHABLE_KEY} afterSignOutUrl="/">
       <QueryClientProvider client={queryClient}>
         <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
           <AppRoutes />

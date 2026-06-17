@@ -1,12 +1,13 @@
 import { useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Users, ClipboardList, Activity, Zap, Bell, AlertTriangle, Info, RefreshCw, Plus, X, Loader2 } from "lucide-react";
+import { Users, ClipboardList, Activity, Zap, Bell, AlertTriangle, Info, RefreshCw, Plus, X, Loader2, DollarSign, Check, XCircle, Trash2 } from "lucide-react";
 import { useApi } from "../lib/api";
 import { cn } from "../lib/utils";
 
 interface Stats { serviceRequests: number; activeTechnicians: number; taskOverview: number; dispatchReadiness: number; }
-interface Alert { _id: string; message: string; timestamp: string; type: "info" | "warning" | "critical"; }
+interface AlertItem { _id: string; message: string; timestamp: string; type: "info" | "warning" | "critical"; }
 interface Technician { _id: string; name: string; status: string; currentTask: string | null; location: string; }
+interface Expense { _id: string; amount: number; category: string; description: string; status: string; loggedByUserId: string; createdAt: string; }
 
 const statusColors: Record<string, string> = {
   "on-route": "bg-amber-500/20 text-amber-400 border-amber-500/30",
@@ -33,7 +34,6 @@ const modalVariants = {
   visible: { opacity: 1, y: 0, scale: 1 },
   exit: { opacity: 0, y: 16, scale: 0.97 },
 };
-
 const backdropVariants = {
   hidden: { opacity: 0 },
   visible: { opacity: 1 },
@@ -43,25 +43,35 @@ const backdropVariants = {
 export default function Dashboard() {
   const { fetchApi } = useApi();
   const [stats, setStats] = useState<Stats | null>(null);
-  const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [alerts, setAlerts] = useState<AlertItem[]>([]);
   const [technicians, setTechnicians] = useState<Technician[]>([]);
+  const [pendingExpenses, setPendingExpenses] = useState<Expense[]>([]);
   const [showAddTech, setShowAddTech] = useState(false);
   const [techForm, setTechForm] = useState(emptyForm);
   const [addingTech, setAddingTech] = useState(false);
   const [techError, setTechError] = useState<string | null>(null);
+  const [approvingExp, setApprovingExp] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
-      const [s, a, t] = await Promise.all([
+      const [s, a, t, e] = await Promise.all([
         fetchApi<Stats>("/stats"),
-        fetchApi<Alert[]>("/alerts"),
+        fetchApi<AlertItem[]>("/alerts?limit=20"),
         fetchApi<Technician[]>("/technicians"),
+        fetchApi<Expense[]>("/expenses"),
       ]);
-      setStats(s); setAlerts(a); setTechnicians(t);
+      setStats(s);
+      setAlerts(a);
+      setTechnicians(t);
+      setPendingExpenses(e.filter((exp) => exp.status === "Pending"));
     } catch { /* empty state shown */ }
   }, [fetchApi]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+    const t = setInterval(load, 30000);
+    return () => clearInterval(t);
+  }, [load]);
 
   async function addTechnician() {
     if (!techForm.name.trim()) return;
@@ -80,6 +90,22 @@ export default function Dashboard() {
     } finally { setAddingTech(false); }
   }
 
+  async function approveExpense(id: string, status: "Approved" | "Rejected") {
+    setApprovingExp(id);
+    try {
+      await fetchApi(`/expenses/${id}`, { method: "PATCH", body: JSON.stringify({ status }) });
+      setPendingExpenses((prev) => prev.filter((e) => e._id !== id));
+    } catch { /* noop */ }
+    finally { setApprovingExp(null); }
+  }
+
+  async function dismissAlert(id: string) {
+    try {
+      await fetchApi(`/alerts/${id}`, { method: "DELETE" });
+      setAlerts((prev) => prev.filter((a) => a._id !== id));
+    } catch { /* noop */ }
+  }
+
   const statCards = [
     { label: "Open Requests", value: stats?.serviceRequests, icon: ClipboardList, color: "text-cyan-400", bg: "bg-cyan-500/10" },
     { label: "Active Technicians", value: stats?.activeTechnicians, icon: Users, color: "text-emerald-400", bg: "bg-emerald-500/10" },
@@ -92,7 +118,7 @@ export default function Dashboard() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-white">Operations Dashboard</h1>
-          <p className="text-slate-400 text-sm mt-1">Real-time overview of field operations</p>
+          <p className="text-slate-400 text-sm mt-1">Real-time overview · auto-refreshes every 30s</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <button onClick={load} className="flex items-center gap-2 px-4 py-2 rounded-lg border border-white/10 text-slate-400 text-sm hover:text-white hover:bg-white/5 transition">
@@ -104,6 +130,7 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {statCards.map(({ label, value, icon: Icon, color, bg }, i) => (
           <motion.div key={label} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07 }}
@@ -118,7 +145,39 @@ export default function Dashboard() {
         ))}
       </div>
 
+      {/* Pending Expense Approvals */}
+      {pendingExpenses.length > 0 && (
+        <div className="glass p-5 border border-amber-500/20">
+          <h2 className="text-white font-semibold mb-4 flex items-center gap-2">
+            <DollarSign className="w-4 h-4 text-amber-400" />
+            Pending Expense Approvals
+            <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30">{pendingExpenses.length}</span>
+          </h2>
+          <div className="space-y-2">
+            {pendingExpenses.map((e) => (
+              <div key={e._id} className="flex items-center justify-between px-4 py-3 rounded-xl bg-white/4 border border-white/8 gap-4">
+                <div className="min-w-0">
+                  <p className="text-white text-sm font-medium">${e.amount.toFixed(2)} · {e.category}</p>
+                  {e.description && <p className="text-slate-500 text-xs truncate">{e.description}</p>}
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <button onClick={() => approveExpense(e._id, "Approved")} disabled={approvingExp === e._id}
+                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs hover:bg-emerald-500/25 transition disabled:opacity-40">
+                    {approvingExp === e._id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />} Approve
+                  </button>
+                  <button onClick={() => approveExpense(e._id, "Rejected")} disabled={approvingExp === e._id}
+                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-rose-500/15 border border-rose-500/30 text-rose-400 text-xs hover:bg-rose-500/25 transition disabled:opacity-40">
+                    <XCircle className="w-3 h-3" /> Reject
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Field Crew */}
         <div className="glass p-5">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-white font-semibold flex items-center gap-2"><Users className="w-4 h-4 text-cyan-400" /> Field Crew ({technicians.length})</h2>
@@ -132,7 +191,7 @@ export default function Dashboard() {
               <p className="text-slate-600 text-xs">Click <span className="text-emerald-400">Add Technician</span> to add your first field engineer.</p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2">
               {technicians.map((t) => (
                 <div key={t._id} className="flex items-center justify-between py-2.5 px-3 rounded-xl bg-white/4 border border-white/6">
                   <div>
@@ -148,21 +207,25 @@ export default function Dashboard() {
           )}
         </div>
 
+        {/* Alert Feed */}
         <div className="glass p-5">
           <h2 className="text-white font-semibold mb-4 flex items-center gap-2"><Bell className="w-4 h-4 text-indigo-400" /> Alert Feed</h2>
           {alerts.length === 0 ? (
             <p className="text-slate-500 text-sm text-center py-8">No alerts yet. Alerts appear here when dispatches happen.</p>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
               {alerts.map((a) => {
                 const Icon = alertIcon[a.type] ?? Info;
                 return (
-                  <div key={a._id} className="flex gap-3 py-2.5 px-3 rounded-xl bg-white/4 border border-white/6">
+                  <div key={a._id} className="flex gap-3 py-2.5 px-3 rounded-xl bg-white/4 border border-white/6 group">
                     <Icon className={`w-4 h-4 mt-0.5 flex-shrink-0 ${alertColor[a.type]}`} />
-                    <div>
+                    <div className="flex-1 min-w-0">
                       <p className="text-slate-300 text-sm leading-snug">{a.message}</p>
-                      <p className="text-slate-500 text-xs mt-0.5">{new Date(a.timestamp).toLocaleTimeString()}</p>
+                      <p className="text-slate-500 text-xs mt-0.5">{new Date(a.timestamp).toLocaleString()}</p>
                     </div>
+                    <button onClick={() => dismissAlert(a._id)} className="opacity-0 group-hover:opacity-100 text-slate-600 hover:text-slate-400 transition flex-shrink-0">
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
                   </div>
                 );
               })}
@@ -171,16 +234,14 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Add Technician Modal — Bug Fix #3: animated backdrop + spring slide-in */}
+      {/* Add Technician Modal */}
       <AnimatePresence>
         {showAddTech && (
           <>
             <motion.div
               key="backdrop"
               variants={backdropVariants}
-              initial="hidden"
-              animate="visible"
-              exit="exit"
+              initial="hidden" animate="visible" exit="exit"
               transition={{ duration: 0.2 }}
               className="fixed inset-0 z-50 bg-black/65 backdrop-blur-sm"
               onClick={() => { setShowAddTech(false); setTechError(null); }}
@@ -189,9 +250,7 @@ export default function Dashboard() {
               <motion.div
                 key="modal"
                 variants={modalVariants}
-                initial="hidden"
-                animate="visible"
-                exit="exit"
+                initial="hidden" animate="visible" exit="exit"
                 transition={{ type: "spring", duration: 0.4, bounce: 0.25 }}
                 className="glass w-full max-w-sm p-6 pointer-events-auto"
               >
@@ -204,41 +263,31 @@ export default function Dashboard() {
                 <div className="space-y-4">
                   <div>
                     <label className="text-slate-400 text-xs mb-1.5 block">Full Name *</label>
-                    <input
-                      value={techForm.name}
-                      onChange={(e) => setTechForm((f) => ({ ...f, name: e.target.value }))}
+                    <input value={techForm.name} onChange={(e) => setTechForm((f) => ({ ...f, name: e.target.value }))}
                       placeholder="e.g. Alex Rivera"
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-cyan-500/50 placeholder:text-slate-600"
-                    />
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-cyan-500/50 placeholder:text-slate-600" />
                   </div>
                   <div>
-                    <label className="text-slate-400 text-xs mb-1.5 block">Email <span className="text-slate-600">(for dispatch notifications)</span></label>
-                    <input
-                      type="email"
-                      value={techForm.email}
-                      onChange={(e) => setTechForm((f) => ({ ...f, email: e.target.value }))}
+                    <label className="text-slate-400 text-xs mb-1.5 block">
+                      Email <span className="text-slate-600">(must match their sign-up email)</span>
+                    </label>
+                    <input type="email" value={techForm.email} onChange={(e) => setTechForm((f) => ({ ...f, email: e.target.value }))}
                       placeholder="e.g. alex@yourcompany.com"
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-cyan-500/50 placeholder:text-slate-600"
-                    />
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-cyan-500/50 placeholder:text-slate-600" />
+                    <p className="text-slate-600 text-xs mt-1">Enter the same email they'll use to sign up — tasks will auto-link to their account.</p>
                   </div>
                   <div>
                     <label className="text-slate-400 text-xs mb-1.5 block">Zone / Location</label>
-                    <select
-                      value={techForm.location}
-                      onChange={(e) => setTechForm((f) => ({ ...f, location: e.target.value }))}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm focus:outline-none focus:border-cyan-500/50"
-                    >
+                    <select value={techForm.location} onChange={(e) => setTechForm((f) => ({ ...f, location: e.target.value }))}
+                      className="w-full bg-[#0E1521] border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm focus:outline-none focus:border-cyan-500/50">
                       {Object.keys(ZONE_COORDS).map((z) => <option key={z} value={z}>{z}</option>)}
                       <option value="Other">Other</option>
                     </select>
                   </div>
                   <div>
                     <label className="text-slate-400 text-xs mb-1.5 block">Initial Status</label>
-                    <select
-                      value={techForm.status}
-                      onChange={(e) => setTechForm((f) => ({ ...f, status: e.target.value }))}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm focus:outline-none focus:border-cyan-500/50"
-                    >
+                    <select value={techForm.status} onChange={(e) => setTechForm((f) => ({ ...f, status: e.target.value }))}
+                      className="w-full bg-[#0E1521] border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm focus:outline-none focus:border-cyan-500/50">
                       <option value="idle">Idle (available for dispatch)</option>
                       <option value="break">On Break</option>
                     </select>

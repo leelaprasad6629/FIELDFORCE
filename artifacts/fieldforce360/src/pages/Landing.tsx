@@ -1,4 +1,3 @@
-import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { Zap, Shield, BarChart2, Map, ArrowRight, CheckCircle } from "lucide-react";
 
@@ -9,7 +8,12 @@ const features = [
   { icon: Map, color: "text-amber-400", bg: "bg-amber-500/10", title: "Live Fleet Map", desc: "Real-time technician positions across all zones." },
 ];
 
-export default function Landing() {
+interface Props {
+  onSignIn: () => void;
+  onSignUp: () => void;
+}
+
+export default function Landing({ onSignIn, onSignUp }: Props) {
   return (
     <div className="min-h-screen flex flex-col" style={{ background: "#080C14" }}>
       <header className="relative overflow-hidden flex flex-col items-center justify-center py-28 px-4 text-center">
@@ -28,12 +32,18 @@ export default function Landing() {
             Dispatch, track, and analyze your field teams — with smart routing, real-time maps, and predictive insights.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/sign-up" className="inline-flex items-center gap-2 px-7 py-3.5 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 text-white font-semibold text-base hover:opacity-90 transition no-underline">
+            <button
+              onClick={onSignUp}
+              className="inline-flex items-center gap-2 px-7 py-3.5 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 text-white font-semibold text-base hover:opacity-90 transition"
+            >
               Get Started <ArrowRight className="w-4 h-4" />
-            </Link>
-            <Link href="/sign-in" className="inline-flex items-center gap-2 px-7 py-3.5 rounded-xl border border-white/15 text-slate-300 font-semibold text-base hover:bg-white/5 transition no-underline">
+            </button>
+            <button
+              onClick={onSignIn}
+              className="inline-flex items-center gap-2 px-7 py-3.5 rounded-xl border border-white/15 text-slate-300 font-semibold text-base hover:bg-white/5 transition"
+            >
               Sign In
-            </Link>
+            </button>
           </div>
         </motion.div>
       </header>

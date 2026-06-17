@@ -1,1 +1,3 @@
 - [FieldForce360 stack](fieldforce360-stack.md) — React+Vite+Clerk frontend, Express+Mongoose backend; secrets required to run
+- [Technician task linking](technician-task-linking.md) — manager-added technicians have no clerkUserId; email-match on sign-up links tasks correctly
+- [Clerk JWT role claims](clerk-jwt-role.md) — role lives in JWT publicMetadata; read directly in clerkAuth.ts to skip extra getUser() API call
