@@ -2,24 +2,29 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useUser } from "@clerk/nextjs";
 import { LayoutDashboard, MapPin, ClipboardList, BarChart3, HardHat, Zap } from "lucide-react";
+import { homePathForRole, type UserRole } from "@/lib/roles";
 
-const navItems = [
-  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { label: "Live Map", href: "/map", icon: MapPin },
-  { label: "Requests", href: "/requests", icon: ClipboardList },
-  { label: "Analytics", href: "/analytics", icon: BarChart3 },
-  { label: "Technician", href: "/technician", icon: HardHat },
+const allNavItems = [
+  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard, roles: ["manager"] as UserRole[] },
+  { label: "Live Map", href: "/map", icon: MapPin, roles: ["manager"] as UserRole[] },
+  { label: "Requests", href: "/requests", icon: ClipboardList, roles: ["manager"] as UserRole[] },
+  { label: "Analytics", href: "/analytics", icon: BarChart3, roles: ["manager"] as UserRole[] },
+  { label: "Technician", href: "/technician", icon: HardHat, roles: ["technician"] as UserRole[] },
 ];
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const { user } = useUser();
+  const role = user?.publicMetadata?.role as UserRole | undefined;
+  const navItems = role ? allNavItems.filter((item) => item.roles.includes(role)) : allNavItems;
+  const homeHref = role ? homePathForRole(role) : "/dashboard";
 
   return (
     <aside className="group fixed left-0 top-0 z-40 hidden h-screen w-16 flex-col border-r border-white/10 bg-white/[0.03] backdrop-blur-xl transition-[width] duration-300 ease-out hover:w-60 lg:flex">
-      {/* Logo */}
       <Link
-        href="/dashboard"
+        href={homeHref}
         className="flex h-16 items-center gap-3 overflow-hidden border-b border-white/10 px-[18px]"
       >
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-cyan/15 text-cyan ring-1 ring-cyan/30">
@@ -30,7 +35,6 @@ export default function Sidebar() {
         </span>
       </Link>
 
-      {/* Nav */}
       <nav className="flex flex-1 flex-col gap-1 px-3 py-6">
         {navItems.map((item) => {
           const Icon = item.icon;
@@ -59,7 +63,6 @@ export default function Sidebar() {
         })}
       </nav>
 
-      {/* Footer status */}
       <div className="border-t border-white/10 p-3">
         <div className="flex items-center gap-3 overflow-hidden rounded-xl px-[10px] py-2">
           <span className="relative flex h-2.5 w-2.5 shrink-0">

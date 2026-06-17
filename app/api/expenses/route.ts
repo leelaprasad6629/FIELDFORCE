@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireApiUser } from "@/lib/auth";
 
 const mockExpenses = [
   { id: "EXP-3081", amount: 74, category: "Fuel", description: "Fuel refill for van", status: "Pending", loggedByUserId: "demo-user", createdAt: new Date().toISOString() },
@@ -6,10 +7,15 @@ const mockExpenses = [
 ];
 
 export async function GET() {
+  const authResult = await requireApiUser();
+  if (authResult instanceof NextResponse) return authResult;
   return NextResponse.json(mockExpenses);
 }
 
 export async function POST(req: NextRequest) {
+  const authResult = await requireApiUser();
+  if (authResult instanceof NextResponse) return authResult;
+
   const payload = await req.json();
   const expense = {
     id: `EXP-${Math.floor(Math.random() * 10000)}`,
@@ -17,7 +23,7 @@ export async function POST(req: NextRequest) {
     category: payload.category ?? "Miscellaneous",
     description: payload.description ?? "Expense logged from technician app.",
     status: payload.status ?? "Pending",
-    loggedByUserId: payload.loggedByUserId ?? "demo-user",
+    loggedByUserId: authResult.userId,
     createdAt: new Date().toISOString(),
   };
 
@@ -26,6 +32,9 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
+  const authResult = await requireApiUser();
+  if (authResult instanceof NextResponse) return authResult;
+
   const payload = await req.json();
   if (!payload.id) {
     return NextResponse.json({ error: "Missing expense ID" }, { status: 400 });

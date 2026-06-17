@@ -1,13 +1,15 @@
 import mongoose, { Document, Model, Schema } from "mongoose";
 
-export type TechnicianStatus = "active" | "idle" | "break";
+export type TechnicianStatus = "on-route" | "on-site" | "idle" | "break";
 
 export interface ITechnician extends Document {
   name: string;
   status: TechnicianStatus;
-  currentTask?: string;
+  currentTask?: string | null;
   location: string;
-  role: string;
+  lat: number;
+  lng: number;
+  clerkUserId?: string | null;
 }
 
 const TechnicianSchema = new Schema<ITechnician>({
@@ -15,12 +17,14 @@ const TechnicianSchema = new Schema<ITechnician>({
   status: {
     type: String,
     required: true,
-    enum: ["active", "idle", "break"],
+    enum: ["on-route", "on-site", "idle", "break"],
     default: "idle",
   },
   currentTask: { type: String, default: null },
   location: { type: String, required: true },
-  role: { type: String, required: true, default: "Field Technician" },
+  lat: { type: Number, required: true, default: 40.7128 },
+  lng: { type: Number, required: true, default: -74.006 },
+  clerkUserId: { type: String, default: null, index: true },
 });
 
 export const Technician: Model<ITechnician> =

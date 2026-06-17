@@ -24,7 +24,7 @@ export default function LandingPage() {
           <span className="text-lg font-bold text-white">FieldForce 360</span>
         </div>
         <Link
-          href="/dashboard"
+          href="/sign-in"
           className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/10"
         >
           Sign in
@@ -50,7 +50,7 @@ export default function LandingPage() {
           </p>
           <div className="mt-8 flex justify-center gap-3">
             <Link
-              href="/dashboard"
+              href="/sign-in"
               className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan to-indigo px-6 py-3 text-sm font-semibold text-white shadow-glow-cyan transition-shadow hover:shadow-glow-indigo"
             >
               Launch Dashboard

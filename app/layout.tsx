@@ -24,8 +24,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       appearance={clerkAppearance}
       signInUrl="/sign-in"
       signUpUrl="/sign-up"
-      signInFallbackRedirectUrl="/dashboard"
-      signUpFallbackRedirectUrl="/dashboard"
+      signInFallbackRedirectUrl="/onboarding/role"
+      signUpFallbackRedirectUrl="/onboarding/role"
     >
       <html lang="en" className={`${inter.variable} bg-background`}>
         <body className="font-sans antialiased">{children}</body>

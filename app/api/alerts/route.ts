@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server";
 import dbConnect from "@/lib/mongodb";
+import { requireApiUser } from "@/lib/auth";
 import { Alert } from "@/models/Alert";
 
 export async function GET() {
+  const authResult = await requireApiUser();
+  if (authResult instanceof NextResponse) return authResult;
+
   try {
     await dbConnect();
     const alerts = await Alert.find({}).sort({ timestamp: -1 }).limit(10).lean();
