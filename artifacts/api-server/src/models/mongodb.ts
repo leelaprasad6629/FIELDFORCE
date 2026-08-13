@@ -14,10 +14,21 @@ async function dbConnect() {
   const c = cache._mongooseCache!;
   if (c.conn) return c.conn;
   if (!c.promise) {
-    c.promise = mongoose.connect(MONGODB_URI).then((m) => m);
+    c.promise = mongoose.connect(MONGODB_URI, {
+      serverSelectionTimeoutMS: 10000,
+      bufferCommands: false,
+    }).then((m) => m);
   }
-  c.conn = await c.promise;
-  return c.conn;
+  try {
+    c.conn = await c.promise;
+    return c.conn;
+  } catch (err) {
+    // Clear the rejected promise so the next call can retry.
+    // Without this, a transient failure (e.g. cold start network blip)
+    // permanently breaks all subsequent DB calls on that warm instance.
+    c.promise = null;
+    throw err;
+  }
 }
 
 export default dbConnect;
