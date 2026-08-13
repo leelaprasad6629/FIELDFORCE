@@ -8,7 +8,7 @@ interface ChecklistItem { label: string; done: boolean; }
 interface Task {
   _id: string; taskId: string; title: string; status: string; priority: string;
   zone: string; location: string; eta: string | null; checklist: ChecklistItem[];
-  category: string;
+  category: string; customerName: string | null;
 }
 interface Expense { _id?: string; id?: string; amount: number; category: string; description: string; status: string; }
 interface TechProfile { _id: string; name: string; status: string; location: string; currentTask: string | null; }
@@ -185,9 +185,11 @@ export default function TechnicianView() {
                 <div className="flex items-center gap-2 flex-wrap mb-1">
                   <h2 className="text-white font-semibold">{task.title}</h2>
                   <span className={cn("text-xs px-2 py-0.5 rounded-full border capitalize", priorityColors[task.priority] ?? priorityColors.medium)}>{task.priority}</span>
+                  <span className={cn("text-xs px-2 py-0.5 rounded-full border capitalize", task.status === "in-progress" ? "text-cyan-400 bg-cyan-500/15 border-cyan-500/30" : task.status === "completed" ? "text-emerald-400 bg-emerald-500/15 border-emerald-500/30" : "text-slate-400 bg-white/5 border-white/10")}>{task.status.replace("-", " ")}</span>
                   <span className="text-xs px-2 py-0.5 rounded-full border border-white/10 bg-white/5 text-slate-400">{task.category}</span>
                 </div>
                 <p className="text-slate-500 text-sm">{task.location} · {task.zone}</p>
+              {task.customerName && <p className="text-slate-400 text-xs mt-0.5">Customer: <span className="text-slate-300">{task.customerName}</span></p>}
                 {task.eta && <p className="text-slate-500 text-xs mt-0.5">ETA: {new Date(task.eta).toLocaleString()}</p>}
               </div>
               <div className="text-right flex-shrink-0">

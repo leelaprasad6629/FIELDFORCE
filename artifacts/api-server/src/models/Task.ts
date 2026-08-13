@@ -15,6 +15,7 @@ export interface ITask extends Document {
   assignedTo?: string | null;
   assignedTechnicianId?: string | null;
   serviceRequestId?: string | null;
+  customerName?: string | null;
   status: TaskStatus;
   zone: string;
   location: string;
@@ -37,6 +38,7 @@ const TaskSchema = new Schema<ITask>({
   assignedTo: { type: String, default: null },
   assignedTechnicianId: { type: String, default: null },
   serviceRequestId: { type: String, default: null },
+  customerName: { type: String, default: null },
   status: { type: String, required: true, enum: ["pending", "in-progress", "completed", "cancelled"], default: "pending" },
   zone: { type: String, required: true },
   location: { type: String, required: true },

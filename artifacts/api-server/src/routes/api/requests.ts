@@ -156,7 +156,7 @@ router.post("/requests/:id/assign", async (req: Request, res: Response) => {
     const task = await Task.create({
       taskId: `TSK-${Date.now()}`, title: serviceRequest.title, category: serviceRequest.category,
       assignedTo: technician.name, assignedTechnicianId: String(technician._id),
-      serviceRequestId: String(serviceRequest._id), status: "in-progress",
+      serviceRequestId: String(serviceRequest._id), customerName: serviceRequest.customerName, status: "in-progress",
       zone: serviceRequest.location, location: serviceRequest.location,
       priority: serviceRequest.priority.toLowerCase(), eta,
       checklist: DEFAULT_CHECKLIST.map((label) => ({ label, done: false })),

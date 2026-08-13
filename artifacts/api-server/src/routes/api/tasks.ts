@@ -18,6 +18,7 @@ function serializeTask(doc: Record<string, unknown>) {
     assignedTo: doc.assignedTo ?? null,
     assignedTechnicianId: doc.assignedTechnicianId ?? null,
     serviceRequestId: doc.serviceRequestId ?? null,
+  customerName: doc.customerName ?? null,
     status: doc.status,
     zone: doc.zone,
     location: doc.location,
