@@ -114,7 +114,7 @@ async function buildAll() {
   const distDir = path.resolve(artifactDir, "dist");
   await rm(distDir, { recursive: true, force: true });
 
-  // Build 1: Server entry point (for standalone / Replit usage)
+  // Build 1: Server entry point (for standalone / Replit usage) — ESM
   await esbuild({
     ...commonOpts,
     entryPoints: [path.resolve(artifactDir, "src/index.ts")],
@@ -122,15 +122,23 @@ async function buildAll() {
     outExtension: { ".js": ".mjs" },
   });
 
-  // Build 2: Vercel serverless handler (exports Express app, no listen())
+  // Build 2: Vercel serverless handler — CommonJS (Vercel requires CJS for .js functions)
   await esbuild({
-    ...commonOpts,
+    platform: "node",
+    bundle: true,
+    format: "cjs",
+    logLevel: "info",
+    external: externalPkgs,
+    sourcemap: "linked",
     entryPoints: [path.resolve(artifactDir, "src/vercel-handler.ts")],
     outdir: distDir,
-    outExtension: { ".js": ".mjs" },
+    outExtension: { ".js": ".cjs" },
     define: {
       "process.env.VERCEL": '"true"',
     },
+    plugins: [
+      esbuildPluginPino({ transports: ["pino-pretty"] })
+    ],
   });
 }
 

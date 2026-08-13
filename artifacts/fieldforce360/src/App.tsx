@@ -51,26 +51,40 @@ function AuthModal({ view, onClose }: { view: "sign-in" | "sign-up"; onClose: ()
   );
 }
 
+function FullScreenLoader() {
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center" style={{ background: "#080C14" }}>
+      <div className="w-8 h-8 border-2 border-cyan-500/40 border-t-cyan-500 rounded-full animate-spin" />
+    </div>
+  );
+}
+
 function PublicLanding() {
   const { isSignedIn, isLoaded } = useAuth();
   const [authView, setAuthView] = useState<"sign-in" | "sign-up" | null>(null);
 
-  if (!isLoaded) {
-    return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: "#080C14" }}>
-        <div className="w-8 h-8 border-2 border-cyan-500/40 border-t-cyan-500 rounded-full animate-spin" />
-      </div>
-    );
-  }
-  if (isSignedIn) return <Redirect to="/dashboard" />;
+  // Only redirect if Clerk is loaded AND user is signed in.
+  // Do NOT conditionally render/unmount the Landing — that's what causes the race condition
+  // where the first click is lost during the mount transition.
+  if (isLoaded && isSignedIn) return <Redirect to="/dashboard" />;
 
   return (
-    <>
-      <Landing onSignIn={() => setAuthView("sign-in")} onSignUp={() => setAuthView("sign-up")} />
-      {authView && (
+    <div className="relative">
+      {/* Landing is ALWAYS mounted — its event handlers stay active */}
+      <Landing
+        onSignIn={() => setAuthView("sign-in")}
+        onSignUp={() => setAuthView("sign-up")}
+        authReady={isLoaded}
+      />
+
+      {/* Loader overlays on top while Clerk initializes, then disappears */}
+      {!isLoaded && <FullScreenLoader />}
+
+      {/* Auth modal only renders when Clerk is fully loaded */}
+      {authView && isLoaded && (
         <AuthModal view={authView} onClose={() => setAuthView(null)} />
       )}
-    </>
+    </div>
   );
 }
 
@@ -80,11 +94,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
 
   if (!isLoaded) {
-    return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: "#080C14" }}>
-        <div className="w-8 h-8 border-2 border-cyan-500/40 border-t-cyan-500 rounded-full animate-spin" />
-      </div>
-    );
+    return <FullScreenLoader />;
   }
 
   if (!isSignedIn) return <Redirect to="/" />;
