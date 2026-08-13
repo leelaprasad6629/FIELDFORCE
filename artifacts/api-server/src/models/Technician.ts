@@ -12,6 +12,7 @@ export interface ITechnician extends Document {
   clerkUserId?: string | null;
   email?: string | null;
   phone?: string | null;
+  lastLocationUpdate?: Date | null;
 }
 
 const TechnicianSchema = new Schema<ITechnician>({
@@ -24,6 +25,7 @@ const TechnicianSchema = new Schema<ITechnician>({
   clerkUserId: { type: String, default: null, index: true },
   email: { type: String, default: null },
   phone: { type: String, default: null },
+  lastLocationUpdate: { type: Date, default: null },
 });
 
 export const Technician: Model<ITechnician> =

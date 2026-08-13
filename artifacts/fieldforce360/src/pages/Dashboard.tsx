@@ -6,8 +6,17 @@ import { cn } from "../lib/utils";
 
 interface Stats { serviceRequests: number; activeTechnicians: number; taskOverview: number; dispatchReadiness: number; }
 interface AlertItem { _id: string; message: string; timestamp: string; type: "info" | "warning" | "critical"; }
-interface Technician { _id: string; name: string; status: string; currentTask: string | null; location: string; email: string | null; phone: string | null; clerkUserId: string | null; }
+interface Technician { _id: string; name: string; status: string; currentTask: string | null; location: string; email: string | null; phone: string | null; clerkUserId: string | null; lastLocationUpdate?: string | null; }
 interface Expense { _id: string; amount: number; category: string; description: string; status: string; loggedByUserId: string; createdAt: string; }
+
+function timeAgo(iso: string | null | undefined): string {
+  if (!iso) return "never";
+  const diff = Date.now() - new Date(iso).getTime();
+  if (diff < 30000) return "just now";
+  if (diff < 60000) return "<1 min ago";
+  if (diff < 3600000) return `${Math.floor(diff / 60000)} min ago`;
+  return `${Math.floor(diff / 3600000)} hr ago`;
+}
 
 const statusColors: Record<string, string> = {
   "on-route": "bg-amber-500/20 text-amber-400 border-amber-500/30",
@@ -207,6 +216,7 @@ export default function Dashboard() {
                     {(t.email || t.phone) && (
                       <p className="text-slate-600 text-xs mt-0.5">{[t.email, t.phone].filter(Boolean).join(" · ")}</p>
                     )}
+                    <p className="text-slate-600 text-xs mt-0.5">Last seen: {timeAgo(t.lastLocationUpdate)}</p>
                   </div>
                   <span className={cn("text-xs px-2.5 py-1 rounded-full border capitalize flex-shrink-0", statusColors[t.status] ?? statusColors.idle)}>
                     {t.status.replace("-", " ")}

@@ -152,6 +152,7 @@ router.post("/requests/:id/assign", async (req: Request, res: Response) => {
     technician.location = serviceRequest.location;
     technician.lat = lat + (Math.random() - 0.5) * 0.01;
     technician.lng = lng + (Math.random() - 0.5) * 0.01;
+    technician.lastLocationUpdate = new Date();
     await technician.save();
     const task = await Task.create({
       taskId: `TSK-${Date.now()}`, title: serviceRequest.title, category: serviceRequest.category,

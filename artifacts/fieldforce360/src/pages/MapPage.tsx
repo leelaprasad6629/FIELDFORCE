@@ -9,6 +9,7 @@ interface Technician {
   _id: string; name: string; status: string; location: string;
   lat: number; lng: number; currentTask: string | null;
   email?: string | null; phone?: string | null;
+  lastLocationUpdate?: string | null;
 }
 
 const statusColors: Record<string, { dot: string; badge: string; hex: string }> = {
@@ -18,12 +19,31 @@ const statusColors: Record<string, { dot: string; badge: string; hex: string }> 
   "break": { dot: "bg-indigo-400", badge: "bg-indigo-500/20 text-indigo-400 border-indigo-500/30", hex: "#818cf8" },
 };
 
-function makeTechIcon(status: string): L.DivIcon {
+
+
+function timeAgo(iso: string | null | undefined): string {
+  if (!iso) return "never";
+  const diff = Date.now() - new Date(iso).getTime();
+  if (diff < 30000) return "just now";
+  if (diff < 60000) return "<1 min ago";
+  if (diff < 3600000) return `${Math.floor(diff / 60000)} min ago`;
+  if (diff < 86400000) return `${Math.floor(diff / 3600000)} hr ago`;
+  return new Date(iso).toLocaleDateString();
+}
+
+function isStale(iso: string | null | undefined): boolean {
+  if (!iso) return true;
+  return Date.now() - new Date(iso).getTime() > 5 * 60 * 1000;
+}
+
+function makeTechIcon(status: string, tech?: Technician): L.DivIcon {
   const hex = statusColors[status]?.hex ?? statusColors.idle.hex;
+  const stale = isStale(tech?.lastLocationUpdate);
+  const staleRing = stale && status !== "on-route" ? `<div style="position:absolute;inset:-4px;border-radius:50%;border:1px dashed rgba(239,68,68,0.5);"></div>` : "";
   const pulsing = status === "on-route" ? `<span style="position:absolute;inset:0;border-radius:50%;animation:ping 1s infinite;opacity:0.5;background:${hex}40"></span>` : "";
   return L.divIcon({
     className: "tech-marker",
-    html: `<div style="position:relative;width:20px;height:20px;">${pulsing}<div style="position:relative;width:16px;height:16px;border-radius:50%;background:${hex};border:2px solid rgba(255,255,255,0.6);box-shadow:0 0 6px ${hex}80;"></div></div>`,
+    html: `<div style="position:relative;width:20px;height:20px;">${staleRing}${pulsing}<div style="position:relative;width:16px;height:16px;border-radius:50%;background:${hex};border:2px solid rgba(255,255,255,0.6);box-shadow:0 0 6px ${hex}80;"></div></div>`,
     iconSize: [20, 20],
     iconAnchor: [10, 10],
   });
@@ -39,6 +59,7 @@ function makeTechPopup(tech: Technician): string {
     tech.currentTask ? `<div><strong style="color:#cbd5e1;">Task:</strong> ${tech.currentTask}</div>` : "",
     `<div><strong style="color:#cbd5e1;">Location:</strong> ${tech.location}</div>`,
     `<div><strong style="color:#cbd5e1;">Coords:</strong> ${tech.lat.toFixed(4)}, ${tech.lng.toFixed(4)}</div>`,
+    `<div><strong style="color:#cbd5e1;">Updated:</strong> ${timeAgo(tech.lastLocationUpdate)}</div>`,
     '</div></div>',
   ].join("");
 }
@@ -108,7 +129,7 @@ export default function MapPage() {
       const bounds: [number, number][] = [];
 
       for (const tech of validTechs) {
-        const marker = L.marker([tech.lat, tech.lng], { icon: makeTechIcon(tech.status) })
+        const marker = L.marker([tech.lat, tech.lng], { icon: makeTechIcon(tech.status, tech) })
           .bindPopup(makeTechPopup(tech))
           .addTo(mapRef.current!);
 
@@ -184,6 +205,10 @@ export default function MapPage() {
                 {status.replace("-", " ")}
               </div>
             ))}
+            <div className="flex items-center gap-2 text-slate-400 pt-1 border-t border-white/10">
+              <span className="w-2.5 h-2.5 rounded-full border border-dashed border-rose-500/50" />
+              Stale (>5 min)
+            </div>
           </div>
         </div>
 
@@ -204,12 +229,16 @@ export default function MapPage() {
                     <span className={cn("text-xs px-2 py-0.5 rounded-full border capitalize", colors.badge)}>
                       {t.status.replace("-", " ")}
                     </span>
+                    {isStale(t.lastLocationUpdate) && (
+                      <span className="w-2 h-2 rounded-full bg-rose-500" title="Location not updated recently" />
+                    )}
                   </div>
                   <p className="text-slate-500 text-xs truncate">{t.currentTask ?? t.location}</p>
                   {selected?._id === t._id && (
                     <div className="mt-2 pt-2 border-t border-white/10 text-xs text-slate-400 space-y-1">
                       <div className="flex items-center gap-1.5"><Navigation className="w-3 h-3" />{t.lat.toFixed(4)}, {t.lng.toFixed(4)}</div>
                       <div><span className="text-slate-500">Location: </span>{t.location}</div>
+                      <div><span className="text-slate-500">Last seen: </span><span className={isStale(t.lastLocationUpdate) ? "text-rose-400" : "text-slate-400"}>{timeAgo(t.lastLocationUpdate)}</span></div>
                       {t.currentTask && <div><span className="text-slate-500">Task: </span>{t.currentTask}</div>}
                     </div>
                   )}

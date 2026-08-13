@@ -18,6 +18,7 @@ function serialize(doc: Record<string, unknown>) {
     clerkUserId: doc.clerkUserId ?? null,
     email: doc.email ?? null,
     phone: doc.phone ?? null,
+    lastLocationUpdate: doc.lastLocationUpdate ?? null,
   };
 }
 
@@ -87,6 +88,7 @@ router.patch("/technicians/:id", async (req: Request, res: Response) => {
     if (status && VALID.includes(status)) technician.status = status;
     if (typeof lat === "number") technician.lat = lat;
     if (typeof lng === "number") technician.lng = lng;
+    if (typeof lat === "number" || typeof lng === "number") technician.lastLocationUpdate = new Date();
     if (location) technician.location = location;
     // currentTask, email, and phone are manager-only fields
     if (auth.role === "manager") {

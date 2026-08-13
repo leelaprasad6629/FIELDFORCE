@@ -155,6 +155,7 @@ router.patch("/user/me/status", async (req: Request, res: Response) => {
     technician.status = status;
     if (typeof lat === "number") technician.lat = lat;
     if (typeof lng === "number") technician.lng = lng;
+    if (typeof lat === "number" || typeof lng === "number") technician.lastLocationUpdate = new Date();
     await technician.save();
     // When technician checks in on-site, transition assigned ServiceRequest to In-Progress
     if (status === "on-site" && technician.currentTask) {
