@@ -1,4 +1,4 @@
-import { Switch, Route, Router as WouterRouter, useLocation, Redirect, Link, useRouter } from "wouter";
+import { Switch, Route, Router as WouterRouter, useLocation, Redirect, Link } from "wouter";
 import { ClerkProvider, SignIn, SignUp, useAuth, useUser } from "@clerk/clerk-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -16,6 +16,17 @@ import Expenses from "./pages/Expenses";
 
 const queryClient = new QueryClient();
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
+
+/**
+ * Clerk ↔ wouter integration.
+ * Clerk needs a navigate() function for post-auth redirects (afterSignInUrl, etc).
+ * We push to history and dispatch a popstate so wouter picks up the route change
+ * without a full page reload.
+ */
+function clerkNavigate(to: string) {
+  window.history.pushState(null, "", to);
+  window.dispatchEvent(new PopStateEvent("popstate"));
+}
 
 // Modal backdrop + slide-in for sign-up modal
 const backdrop = { hidden: { opacity: 0 }, visible: { opacity: 1 }, exit: { opacity: 0 } };
@@ -41,7 +52,7 @@ function SignUpModal({ onClose }: { onClose: () => void }) {
           className="pointer-events-auto"
           onClick={(e) => e.stopPropagation()}
         >
-          <SignUp routing="hash" afterSignUpUrl="/onboarding/role" signInUrl="/sign-in" />
+          <SignUp routing="virtual" afterSignUpUrl="/onboarding/role" signInUrl="/sign-in" />
         </motion.div>
       </div>
     </AnimatePresence>
@@ -64,7 +75,7 @@ function SignInPage() {
         <Link href="/" className="block text-center mb-6 text-slate-400 hover:text-white transition text-sm">
           ← Back to home
         </Link>
-        <SignIn routing="hash" afterSignInUrl="/dashboard" signUpUrl="/sign-up" />
+        <SignIn routing="virtual" afterSignInUrl="/dashboard" signUpUrl="/sign-up" />
       </div>
     </div>
   );
@@ -78,7 +89,7 @@ function SignUpPage() {
         <Link href="/" className="block text-center mb-6 text-slate-400 hover:text-white transition text-sm">
           ← Back to home
         </Link>
-        <SignUp routing="hash" afterSignUpUrl="/onboarding/role" signInUrl="/sign-in" />
+        <SignUp routing="virtual" afterSignUpUrl="/onboarding/role" signInUrl="/sign-in" />
       </div>
     </div>
   );
@@ -247,7 +258,7 @@ function App() {
   }
 
   return (
-    <ClerkProvider publishableKey={PUBLISHABLE_KEY} afterSignOutUrl="/">
+    <ClerkProvider publishableKey={PUBLISHABLE_KEY} navigate={clerkNavigate} afterSignOutUrl="/">
       <QueryClientProvider client={queryClient}>
         <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
           <AppRoutes />
