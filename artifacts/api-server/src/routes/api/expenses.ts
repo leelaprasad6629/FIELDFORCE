@@ -3,6 +3,7 @@ import type { Request, Response } from "express";
 import { requireApiUser, requireManagerApi } from "../../lib/clerkAuth.js";
 import dbConnect from "../../models/mongodb.js";
 import { Expense } from "../../models/Expense.js";
+import { Technician } from "../../models/Technician.js";
 
 const router = Router();
 
@@ -13,7 +14,19 @@ router.get("/expenses", async (req: Request, res: Response) => {
     await dbConnect();
     const filter = auth.role === "manager" ? {} : { loggedByUserId: auth.userId };
     const expenses = await Expense.find(filter).sort({ createdAt: -1 }).lean();
-    res.json(expenses);
+    // For managers, attach the technician name who logged each expense
+    if (auth.role === "manager" && expenses.length > 0) {
+      const userIds = [...new Set(expenses.map((e) => e.loggedByUserId))];
+      const techs = await Technician.find({ clerkUserId: { $in: userIds } }).lean();
+      const nameMap = new Map(techs.map((t) => [t.clerkUserId, t.name]));
+      res.json(expenses.map((e) => ({
+        ...e,
+        _id: String(e._id),
+        loggedByName: nameMap.get(e.loggedByUserId) ?? "Unknown",
+      })));
+      return;
+    }
+    res.json(expenses.map((e) => ({ ...e, _id: String(e._id) })));
   } catch (error) {
     req.log.error({ error }, "GET /api/expenses error");
     res.status(500).json({ error: "Failed to fetch expenses" });
@@ -35,7 +48,7 @@ router.post("/expenses", async (req: Request, res: Response) => {
       status: "Pending",
       loggedByUserId: auth.userId,
     });
-    res.status(201).json(expense);
+    res.status(201).json({ ...expense.toObject(), _id: String(expense._id) });
   } catch (error) {
     req.log.error({ error }, "POST /api/expenses error");
     res.status(500).json({ error: "Failed to create expense" });
@@ -52,7 +65,7 @@ router.patch("/expenses/:id", async (req: Request, res: Response) => {
     const { status } = req.body;
     if (status) expense.status = status;
     await expense.save();
-    res.json(expense);
+    res.json({ ...expense.toObject(), _id: String(expense._id) });
   } catch (error) {
     req.log.error({ error }, "PATCH /api/expenses/:id error");
     res.status(500).json({ error: "Failed to update expense" });

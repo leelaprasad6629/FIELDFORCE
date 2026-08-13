@@ -7,7 +7,12 @@ import { cn } from "../lib/utils";
 interface Stats { serviceRequests: number; activeTechnicians: number; taskOverview: number; dispatchReadiness: number; }
 interface AlertItem { _id: string; message: string; timestamp: string; type: "info" | "warning" | "critical"; }
 interface Technician { _id: string; name: string; status: string; currentTask: string | null; location: string; email: string | null; phone: string | null; clerkUserId: string | null; lastLocationUpdate?: string | null; }
-interface Expense { _id: string; amount: number; category: string; description: string; status: string; loggedByUserId: string; createdAt: string; }
+interface Expense { _id: string; amount: number; category: string; description: string; status: string; loggedByUserId: string; createdAt: string; loggedByName?: string; }
+
+function formatDate(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleDateString(undefined, { month: "short", day: "numeric" }) + " " + d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+}
 
 function timeAgo(iso: string | null | undefined): string {
   if (!iso) return "never";
@@ -167,7 +172,8 @@ export default function Dashboard() {
               <div key={e._id} className="flex items-center justify-between px-4 py-3 rounded-xl bg-white/4 border border-white/8 gap-4">
                 <div className="min-w-0">
                   <p className="text-white text-sm font-medium">${e.amount.toFixed(2)} · {e.category}</p>
-                  {e.description && <p className="text-slate-500 text-xs truncate">{e.description}</p>}
+                  <p className="text-slate-500 text-xs">{e.loggedByName ?? "Technician"} · {formatDate(e.createdAt)}</p>
+                  {e.description && <p className="text-slate-600 text-xs truncate">{e.description}</p>}
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <button onClick={() => approveExpense(e._id, "Approved")} disabled={approvingExp === e._id}

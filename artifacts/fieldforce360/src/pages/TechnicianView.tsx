@@ -10,7 +10,7 @@ interface Task {
   zone: string; location: string; eta: string | null; checklist: ChecklistItem[];
   category: string; customerName: string | null;
 }
-interface Expense { _id?: string; id?: string; amount: number; category: string; description: string; status: string; }
+interface Expense { _id?: string; id?: string; amount: number; category: string; description: string; status: string; createdAt?: string; }
 interface TechProfile { _id: string; name: string; status: string; location: string; currentTask: string | null; }
 
 const priorityColors: Record<string, string> = {
@@ -26,6 +26,12 @@ const statusBadge: Record<string, string> = {
   "on-site": "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
   "break": "bg-indigo-500/20 text-indigo-400 border-indigo-500/30",
 };
+
+function formatDate(iso?: string): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  return d.toLocaleDateString(undefined, { month: "short", day: "numeric" }) + " " + d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+}
 
 const EXP_CATEGORIES = ["Fuel", "Meals", "Parking", "Parts", "Tools", "Accommodation", "Miscellaneous"];
 
@@ -300,7 +306,8 @@ export default function TechnicianView() {
             <div key={e._id ?? e.id} className="flex items-center justify-between px-3 py-2.5 rounded-xl bg-white/4 border border-white/6">
               <div>
                 <p className="text-white text-sm font-medium">${e.amount.toFixed(2)} · {e.category}</p>
-                {e.description && <p className="text-slate-500 text-xs">{e.description}</p>}
+                <p className="text-slate-500 text-xs">{e.createdAt ? formatDate(e.createdAt) : ""}</p>
+                {e.description && <p className="text-slate-600 text-xs">{e.description}</p>}
               </div>
               <span className={cn("text-xs px-2 py-0.5 rounded-full border",
                 e.status === "Approved" ? "text-emerald-400 bg-emerald-500/15 border-emerald-500/30" :
