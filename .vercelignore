@@ -1,0 +1,9 @@
+# Exclude files not needed for Vercel deployment
+.migration-backup
+.replit
+.replitignore
+replit.md
+artifacts/mockup-sandbox
+.agents
+scripts
+attached_assets
