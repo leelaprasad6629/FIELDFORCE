@@ -6,7 +6,7 @@ import { cn } from "../lib/utils";
 
 interface Stats { serviceRequests: number; activeTechnicians: number; taskOverview: number; dispatchReadiness: number; }
 interface AlertItem { _id: string; message: string; timestamp: string; type: "info" | "warning" | "critical"; }
-interface Technician { _id: string; name: string; status: string; currentTask: string | null; location: string; }
+interface Technician { _id: string; name: string; status: string; currentTask: string | null; location: string; email: string | null; phone: string | null; clerkUserId: string | null; }
 interface Expense { _id: string; amount: number; category: string; description: string; status: string; loggedByUserId: string; createdAt: string; }
 
 const statusColors: Record<string, string> = {
@@ -27,7 +27,7 @@ const ZONE_COORDS: Record<string, { lat: number; lng: number }> = {
   "Zone Bravo": { lat: 40.715, lng: -74.02 },
 };
 
-const emptyForm = { name: "", email: "", location: "Depot HQ", status: "idle" as string };
+const emptyForm = { name: "", email: "", phone: "", location: "Depot HQ", status: "idle" as string };
 
 const modalVariants = {
   hidden: { opacity: 0, y: 32, scale: 0.97 },
@@ -80,7 +80,7 @@ export default function Dashboard() {
       const coords = ZONE_COORDS[techForm.location] ?? { lat: 40.7128 + (Math.random() - 0.5) * 0.05, lng: -74.006 + (Math.random() - 0.5) * 0.05 };
       await fetchApi("/technicians", {
         method: "POST",
-        body: JSON.stringify({ name: techForm.name.trim(), email: techForm.email.trim() || null, location: techForm.location, status: techForm.status, lat: coords.lat, lng: coords.lng }),
+        body: JSON.stringify({ name: techForm.name.trim(), email: techForm.email.trim() || null, phone: techForm.phone.trim() || null, location: techForm.location, status: techForm.status, lat: coords.lat, lng: coords.lng }),
       });
       setShowAddTech(false);
       setTechForm(emptyForm);
@@ -194,11 +194,21 @@ export default function Dashboard() {
             <div className="space-y-2">
               {technicians.map((t) => (
                 <div key={t._id} className="flex items-center justify-between py-2.5 px-3 rounded-xl bg-white/4 border border-white/6">
-                  <div>
-                    <p className="text-white text-sm font-medium">{t.name}</p>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="text-white text-sm font-medium">{t.name}</p>
+                      {t.clerkUserId ? (
+                        <span className="text-xs px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">Linked</span>
+                      ) : (
+                        <span className="text-xs px-1.5 py-0.5 rounded-full bg-slate-500/15 text-slate-500 border border-slate-500/20">Unlinked</span>
+                      )}
+                    </div>
                     <p className="text-slate-500 text-xs mt-0.5">{t.currentTask ?? t.location}</p>
+                    {(t.email || t.phone) && (
+                      <p className="text-slate-600 text-xs mt-0.5">{[t.email, t.phone].filter(Boolean).join(" · ")}</p>
+                    )}
                   </div>
-                  <span className={cn("text-xs px-2.5 py-1 rounded-full border capitalize", statusColors[t.status] ?? statusColors.idle)}>
+                  <span className={cn("text-xs px-2.5 py-1 rounded-full border capitalize flex-shrink-0", statusColors[t.status] ?? statusColors.idle)}>
                     {t.status.replace("-", " ")}
                   </span>
                 </div>
@@ -275,6 +285,12 @@ export default function Dashboard() {
                       placeholder="e.g. alex@yourcompany.com"
                       className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-cyan-500/50 placeholder:text-slate-600" />
                     <p className="text-slate-600 text-xs mt-1">Enter the same email they'll use to sign up — tasks will auto-link to their account.</p>
+                  </div>
+                  <div>
+                    <label className="text-slate-400 text-xs mb-1.5 block">Phone <span className="text-slate-600">(optional)</span></label>
+                    <input type="tel" value={techForm.phone} onChange={(e) => setTechForm((f) => ({ ...f, phone: e.target.value }))}
+                      placeholder="e.g. +1 555-0123"
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-cyan-500/50 placeholder:text-slate-600" />
                   </div>
                   <div>
                     <label className="text-slate-400 text-xs mb-1.5 block">Zone / Location</label>
