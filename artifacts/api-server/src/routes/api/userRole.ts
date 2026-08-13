@@ -6,6 +6,10 @@ import { Technician } from "../../models/Technician.js";
 
 const router = Router();
 
+function escapeRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 router.post("/user/role", async (req: Request, res: Response) => {
   const auth = await requireApiUser(req, res);
   if (!auth) return;
@@ -20,17 +24,22 @@ router.post("/user/role", async (req: Request, res: Response) => {
     await clerkClient.users.updateUserMetadata(userId, { publicMetadata: { role } });
     if (role === "technician") {
       await dbConnect();
-      // Check if already linked
+      // Check if already linked by clerkUserId
       const linked = await Technician.findOne({ clerkUserId: userId });
       if (!linked) {
-        // Try to find an existing technician by email (manager pre-added them)
-        const byEmail = primaryEmail
-          ? await Technician.findOne({ email: primaryEmail, clerkUserId: null })
-          : null;
+        // Try to find an existing technician by email (case-insensitive) — manager pre-added them
+        let byEmail: typeof Technician.prototype | null = null;
+        if (primaryEmail) {
+          byEmail = await Technician.findOne({
+            email: { $regex: new RegExp(`^${escapeRegex(primaryEmail)}$`, "i") },
+          });
+        }
         if (byEmail) {
-          // Link the pre-existing record to this Clerk user — tasks assigned to this _id become visible
+          // Link the pre-existing record to this Clerk user
+          // Tasks assigned to this _id become visible to this technician
           byEmail.clerkUserId = userId;
           if (!byEmail.name || byEmail.name === "Field User") byEmail.name = displayName;
+          if (!byEmail.email) byEmail.email = primaryEmail;
           await byEmail.save();
         } else {
           // No pre-existing record; create a fresh one
@@ -54,12 +63,63 @@ router.post("/user/role", async (req: Request, res: Response) => {
 });
 
 // Return the current user's linked technician profile (for TechnicianView)
+// Also auto-links if the profile exists by email but hasn't been linked yet
 router.get("/user/me", async (req: Request, res: Response) => {
   const auth = await requireApiUser(req, res);
   if (!auth) return;
   try {
     await dbConnect();
-    const technician = await Technician.findOne({ clerkUserId: auth.userId }).lean();
+    let technician = await Technician.findOne({ clerkUserId: auth.userId }).lean();
+    
+    // If no linked record found, try to auto-link by email
+    // This handles the case where role was set directly in Clerk (bypassing onboarding)
+    if (!technician && auth.role === "technician") {
+      let primaryEmail = auth.email ?? null;
+      // If email not available from auth (role was in JWT), fetch from Clerk
+      if (!primaryEmail) {
+        try {
+          const user = await clerkClient.users.getUser(auth.userId);
+          primaryEmail = user.emailAddresses.find((e) => e.id === user.primaryEmailAddressId)?.emailAddress ?? null;
+        } catch {
+          // Non-fatal
+        }
+      }
+      if (primaryEmail) {
+        const byEmail = await Technician.findOne({
+          email: { $regex: new RegExp(`^${escapeRegex(primaryEmail)}$`, "i") },
+        });
+        if (byEmail) {
+          // Link it
+          byEmail.clerkUserId = auth.userId;
+          await byEmail.save();
+          technician = byEmail.toObject();
+        }
+      }
+      // If still no record, create one (technician exists in Clerk but no profile)
+      if (!technician) {
+        let displayName = "Field User";
+        try {
+          const user = await clerkClient.users.getUser(auth.userId);
+          displayName = [user.firstName, user.lastName].filter(Boolean).join(" ") || user.username || "Field User";
+          if (!primaryEmail) {
+            primaryEmail = user.emailAddresses.find((e) => e.id === user.primaryEmailAddressId)?.emailAddress ?? null;
+          }
+        } catch {
+          // Non-fatal
+        }
+        const created = await Technician.create({
+          name: displayName,
+          status: "idle",
+          location: "Depot HQ",
+          clerkUserId: auth.userId,
+          lat: 40.7128,
+          lng: -74.006,
+          email: primaryEmail,
+        });
+        technician = created.toObject();
+      }
+    }
+
     if (!technician) { res.json({ technician: null }); return; }
     res.json({
       technician: {

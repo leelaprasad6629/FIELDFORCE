@@ -41,6 +41,22 @@ router.post("/technicians", async (req: Request, res: Response) => {
     await dbConnect();
     const { name, location, status, currentTask, lat, lng, clerkUserId, email, phone } = req.body;
     if (!name || !location) { res.status(400).json({ error: "name and location are required" }); return; }
+    // Prevent duplicate technician records by email
+    if (email) {
+      const existing = await Technician.findOne({
+        email: { $regex: new RegExp(`^${email.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "i") },
+      });
+      if (existing) {
+        res.status(409).json({ error: "A technician with this email already exists" }); return;
+      }
+    }
+    // Prevent duplicate by clerkUserId
+    if (clerkUserId) {
+      const existing = await Technician.findOne({ clerkUserId });
+      if (existing) {
+        res.status(409).json({ error: "A technician with this Clerk account already exists" }); return;
+      }
+    }
     const technician = await Technician.create({
       name, status: status ?? "idle", currentTask: currentTask ?? null,
       location, lat: lat ?? 40.7128, lng: lng ?? -74.006,
