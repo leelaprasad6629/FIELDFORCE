@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { motion } from "framer-motion";
-import { BarChart2, TrendingUp, Clock, Zap, RefreshCw } from "lucide-react";
+import { BarChart2, TrendingUp, Clock, Zap, RefreshCw, DollarSign } from "lucide-react";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, LineChart, Line, CartesianGrid } from "recharts";
 import { useApi } from "../lib/api";
 
@@ -9,6 +9,7 @@ interface AnalyticsData {
   routingUplift: number | null; avgResponseMinutes: number | null; firstTimeFixRate: number | null;
   fleetUtilization: number | null; dailyThroughput: number; velocity: Array<{ day: string; tasks: number }>;
   delays: Array<{ day: string; delay: number | null }>;
+  expenses?: { pendingCount: number; pendingAmount: number; approvedCount: number; approvedAmount: number; totalCount: number };
 }
 
 const MOCK_VELOCITY = [
@@ -27,11 +28,15 @@ export default function Analytics() {
   const { fetchApi } = useApi();
   const [data, setData] = useState<AnalyticsData | null>(null);
 
-  async function load() {
+  const load = useCallback(async () => {
     try { setData(await fetchApi<AnalyticsData>("/analytics")); } catch { /* noop */ }
-  }
+  }, []);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    const t = setInterval(load, 60000);
+    return () => clearInterval(t);
+  }, [load]);
 
   const velocity = (data?.hasEnoughData && data.velocity.length > 0) ? data.velocity : MOCK_VELOCITY;
   const delays = (data?.hasEnoughData && data.delays.length > 0) ? data.delays : MOCK_DELAYS;
@@ -41,7 +46,7 @@ export default function Analytics() {
     { label: "Predicted CSAT", value: data?.predictedCsat ? `${data.predictedCsat}%` : isMock ? "87%" : "—", icon: TrendingUp, color: "text-emerald-400", bg: "bg-emerald-500/10" },
     { label: "1st-Time Fix Rate", value: data?.firstTimeFixRate ? `${data.firstTimeFixRate}%` : isMock ? "74%" : "—", icon: Zap, color: "text-cyan-400", bg: "bg-cyan-500/10" },
     { label: "Avg Response", value: data?.avgResponseMinutes ? `${data.avgResponseMinutes}m` : isMock ? "38m" : "—", icon: Clock, color: "text-indigo-400", bg: "bg-indigo-500/10" },
-    { label: "Routing Uplift", value: data?.routingUplift ? `+${data.routingUplift}%` : isMock ? "+12%" : "—", icon: BarChart2, color: "text-amber-400", bg: "bg-amber-500/10" },
+    { label: "Fleet Utilization", value: data?.fleetUtilization ? `${data.fleetUtilization}%` : isMock ? "65%" : "—", icon: BarChart2, color: "text-amber-400", bg: "bg-amber-500/10" },
   ];
 
   return (
@@ -109,6 +114,31 @@ export default function Analytics() {
           </ResponsiveContainer>
         </div>
       </div>
+
+      {data?.expenses && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="glass p-4">
+            <div className="flex items-center gap-2 mb-2"><DollarSign className="w-4 h-4 text-amber-400" /><span className="text-slate-400 text-sm">Pending Expenses</span></div>
+            <p className="text-2xl font-bold text-white">${data.expenses.pendingAmount.toFixed(2)}</p>
+            <p className="text-slate-500 text-xs mt-1">{data.expenses.pendingCount} expense(s)</p>
+          </div>
+          <div className="glass p-4">
+            <div className="flex items-center gap-2 mb-2"><DollarSign className="w-4 h-4 text-emerald-400" /><span className="text-slate-400 text-sm">Approved Expenses</span></div>
+            <p className="text-2xl font-bold text-white">${data.expenses.approvedAmount.toFixed(2)}</p>
+            <p className="text-slate-500 text-xs mt-1">{data.expenses.approvedCount} expense(s)</p>
+          </div>
+          <div className="glass p-4">
+            <div className="flex items-center gap-2 mb-2"><BarChart2 className="w-4 h-4 text-cyan-400" /><span className="text-slate-400 text-sm">Daily Throughput</span></div>
+            <p className="text-2xl font-bold text-white">{data.dailyThroughput}</p>
+            <p className="text-slate-500 text-xs mt-1">tasks this week</p>
+          </div>
+          <div className="glass p-4">
+            <div className="flex items-center gap-2 mb-2"><TrendingUp className="w-4 h-4 text-indigo-400" /><span className="text-slate-400 text-sm">Routing Uplift</span></div>
+            <p className="text-2xl font-bold text-white">{data.routingUplift !== null ? `${data.routingUplift > 0 ? "+" : ""}${data.routingUplift}%` : "—"}</p>
+            <p className="text-slate-500 text-xs mt-1">week over week</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
