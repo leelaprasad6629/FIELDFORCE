@@ -32,6 +32,7 @@ const statusColors: Record<string, string> = {
 
 const alertIcon = { info: Info, warning: AlertTriangle, critical: AlertTriangle };
 const alertColor = { info: "text-cyan-400", warning: "text-amber-400", critical: "text-rose-400" };
+const alertBorder = { info: "border-cyan-500/20", warning: "border-amber-500/20", critical: "border-rose-500/30" };
 
 const ZONE_COORDS: Record<string, { lat: number; lng: number }> = {
   "Zone Alpha": { lat: 40.72, lng: -74.01 },
@@ -239,19 +240,22 @@ export default function Dashboard() {
 
         {/* Alert Feed */}
         <div className="glass p-5">
-          <h2 className="text-white font-semibold mb-4 flex items-center gap-2"><Bell className="w-4 h-4 text-indigo-400" /> Alert Feed</h2>
+          <h2 className="text-white font-semibold mb-4 flex items-center gap-2">
+            <Bell className="w-4 h-4 text-indigo-400" /> Alert Feed
+            {alerts.length > 0 && <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">{alerts.length}</span>}
+          </h2>
           {alerts.length === 0 ? (
-            <p className="text-slate-500 text-sm text-center py-8">No alerts yet. Alerts appear here when dispatches happen.</p>
+            <p className="text-slate-500 text-sm text-center py-8">No alerts. Activity alerts appear here as requests, tasks, expenses, and check-ins occur.</p>
           ) : (
             <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
               {alerts.map((a) => {
                 const Icon = alertIcon[a.type] ?? Info;
                 return (
-                  <div key={a._id} className="flex gap-3 py-2.5 px-3 rounded-xl bg-white/4 border border-white/6 group">
+                  <div key={a._id} className={cn("flex gap-3 py-2.5 px-3 rounded-xl bg-white/4 border group", alertBorder[a.type] ?? "border-white/6")}>
                     <Icon className={`w-4 h-4 mt-0.5 flex-shrink-0 ${alertColor[a.type]}`} />
                     <div className="flex-1 min-w-0">
                       <p className="text-slate-300 text-sm leading-snug">{a.message}</p>
-                      <p className="text-slate-500 text-xs mt-0.5">{new Date(a.timestamp).toLocaleString()}</p>
+                      <p className="text-slate-500 text-xs mt-0.5" title={new Date(a.timestamp).toLocaleString()}>{timeAgo(a.timestamp)}</p>
                     </div>
                     <button onClick={() => dismissAlert(a._id)} className="opacity-0 group-hover:opacity-100 text-slate-600 hover:text-slate-400 transition flex-shrink-0">
                       <Trash2 className="w-3.5 h-3.5" />
