@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { CheckSquare, Square, Loader2, DollarSign, Plus, X, RefreshCw, MapPin, Wifi, WifiOff } from "lucide-react";
+import { CheckSquare, Square, Loader2, DollarSign, Plus, X, RefreshCw, MapPin, Wifi, WifiOff, Crosshair } from "lucide-react";
 import { useApi } from "../lib/api";
 import { cn } from "../lib/utils";
 
@@ -100,6 +100,26 @@ export default function TechnicianView() {
     finally { setUpdatingStatus(false); }
   }
 
+  async function shareLocation() {
+    setUpdatingStatus(true);
+    try {
+      let lat: number | undefined;
+      let lng: number | undefined;
+      if (navigator.geolocation) {
+        try {
+          const pos = await new Promise<GeolocationPosition>((res, rej) => navigator.geolocation.getCurrentPosition(res, rej, { timeout: 5000, enableHighAccuracy: true }));
+          lat = pos.coords.latitude;
+          lng = pos.coords.longitude;
+        } catch { /* geolocation denied or unavailable */ }
+      }
+      if (lat && lng) {
+        await fetchApi("/user/me/status", { method: "PATCH", body: JSON.stringify({ status: currentStatus, lat, lng }) });
+        await load();
+      }
+    } catch { /* noop */ }
+    finally { setUpdatingStatus(false); }
+  }
+
   async function logExpense() {
     setSavingExp(true);
     try {
@@ -155,6 +175,10 @@ export default function TechnicianView() {
                 {updatingStatus ? <Loader2 className="w-3 h-3 animate-spin" /> : currentStatus === "idle" ? "Take a Break" : "Back to Idle"}
               </button>
             )}
+            <button onClick={shareLocation} disabled={updatingStatus}
+              className="text-xs px-3 py-1.5 rounded-lg bg-cyan-500/15 border border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/25 transition disabled:opacity-40 flex items-center gap-1.5">
+              {updatingStatus ? <Loader2 className="w-3 h-3 animate-spin" /> : <Crosshair className="w-3 h-3" />} Share Location
+            </button>
           </div>
         </div>
       ) : (

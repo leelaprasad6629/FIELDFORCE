@@ -1,50 +1,150 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { motion } from "framer-motion";
-import { Map, RefreshCw, Users, Navigation } from "lucide-react";
+import { Map, RefreshCw, Users, Navigation, Loader2 } from "lucide-react";
 import { useApi } from "../lib/api";
 import { cn } from "../lib/utils";
+import * as L from "leaflet";
 
-interface Technician { _id: string; name: string; status: string; location: string; lat: number; lng: number; currentTask: string | null; }
+interface Technician {
+  _id: string; name: string; status: string; location: string;
+  lat: number; lng: number; currentTask: string | null;
+  email?: string | null; phone?: string | null;
+}
 
-const statusColors: Record<string, { dot: string; badge: string }> = {
-  "on-route": { dot: "bg-amber-400", badge: "bg-amber-500/20 text-amber-400 border-amber-500/30" },
-  "on-site": { dot: "bg-emerald-400", badge: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" },
-  "idle": { dot: "bg-slate-400", badge: "bg-slate-500/20 text-slate-400 border-slate-500/30" },
-  "break": { dot: "bg-indigo-400", badge: "bg-indigo-500/20 text-indigo-400 border-indigo-500/30" },
+const statusColors: Record<string, { dot: string; badge: string; hex: string }> = {
+  "on-route": { dot: "bg-amber-400", badge: "bg-amber-500/20 text-amber-400 border-amber-500/30", hex: "#fbbf24" },
+  "on-site": { dot: "bg-emerald-400", badge: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30", hex: "#34d399" },
+  "idle": { dot: "bg-slate-400", badge: "bg-slate-500/20 text-slate-400 border-slate-500/30", hex: "#94a3b8" },
+  "break": { dot: "bg-indigo-400", badge: "bg-indigo-500/20 text-indigo-400 border-indigo-500/30", hex: "#818cf8" },
 };
 
-function MapDot({ tech, minLat, maxLat, minLng, maxLng }: { tech: Technician; minLat: number; maxLat: number; minLng: number; maxLng: number; }) {
-  const latRange = maxLat - minLat || 0.001;
-  const lngRange = maxLng - minLng || 0.001;
-  const x = ((tech.lng - minLng) / lngRange) * 100;
-  const y = (1 - (tech.lat - minLat) / latRange) * 100;
-  const colors = statusColors[tech.status] ?? statusColors.idle;
+function makeTechIcon(status: string): L.DivIcon {
+  const hex = statusColors[status]?.hex ?? statusColors.idle.hex;
+  const pulsing = status === "on-route" ? `<span style="position:absolute;inset:0;border-radius:50%;animation:ping 1s infinite;opacity:0.5;background:${hex}40"></span>` : "";
+  return L.divIcon({
+    className: "tech-marker",
+    html: `<div style="position:relative;width:20px;height:20px;">${pulsing}<div style="position:relative;width:16px;height:16px;border-radius:50%;background:${hex};border:2px solid rgba(255,255,255,0.6);box-shadow:0 0 6px ${hex}80;"></div></div>`,
+    iconSize: [20, 20],
+    iconAnchor: [10, 10],
+  });
+}
 
-  return (
-    <div className="absolute" style={{ left: `${Math.max(2, Math.min(95, x))}%`, top: `${Math.max(5, Math.min(90, y))}%`, transform: "translate(-50%, -50%)" }}>
-      {tech.status === "on-route" && (
-        <span className="absolute inset-0 rounded-full animate-ping opacity-50" style={{ background: "rgba(245,158,11,0.4)" }} />
-      )}
-      <div className={`relative w-4 h-4 rounded-full border-2 border-white/60 ${colors.dot} shadow-lg`} title={tech.name} />
-    </div>
-  );
+function makeTechPopup(tech: Technician): string {
+  const colors = statusColors[tech.status] ?? statusColors.idle;
+  return [
+    '<div style="font-family:Inter,sans-serif;min-width:180px;">',
+    `<div style="font-weight:600;color:#f1f5f9;font-size:14px;margin-bottom:4px;">${tech.name}</div>`,
+    `<div style="display:inline-block;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:500;border:1px solid ${colors.hex}40;background:${colors.hex}20;color:${colors.hex};text-transform:capitalize;">${tech.status.replace("-", " ")}</div>`,
+    '<div style="margin-top:8px;font-size:12px;color:#94a3b8;line-height:1.5;">',
+    tech.currentTask ? `<div><strong style="color:#cbd5e1;">Task:</strong> ${tech.currentTask}</div>` : "",
+    `<div><strong style="color:#cbd5e1;">Location:</strong> ${tech.location}</div>`,
+    `<div><strong style="color:#cbd5e1;">Coords:</strong> ${tech.lat.toFixed(4)}, ${tech.lng.toFixed(4)}</div>`,
+    '</div></div>',
+  ].join("");
 }
 
 export default function MapPage() {
   const { fetchApi } = useApi();
   const [technicians, setTechnicians] = useState<Technician[]>([]);
   const [selected, setSelected] = useState<Technician | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [mapError, setMapError] = useState<string | null>(null);
+
+  const mapRef = useRef<L.Map | null>(null);
+  const markersRef = useRef<Record<string, L.Marker>>({});
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Initialize the Leaflet map once
+  useEffect(() => {
+    if (!containerRef.current || mapRef.current) return;
+
+    try {
+      const map = L.map(containerRef.current, {
+        center: [40.7128, -74.006],
+        zoom: 12,
+        zoomControl: true,
+        attributionControl: true,
+      });
+
+      // Dark theme tile layer (CartoDB Dark Matter - free, no API key)
+      L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        subdomains: "abcd",
+        maxZoom: 20,
+      }).addTo(map);
+
+      mapRef.current = map;
+      setLoading(false);
+
+      // Fix map rendering after container becomes visible
+      setTimeout(() => map.invalidateSize(), 200);
+    } catch (err) {
+      setMapError(err instanceof Error ? err.message : "Failed to initialize map");
+      setLoading(false);
+    }
+
+    return () => {
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
+      markersRef.current = {};
+    };
+  }, []);
 
   const load = useCallback(async () => {
-    try { setTechnicians(await fetchApi<Technician[]>("/technicians")); } catch { /* noop */ }
+    try {
+      const data = await fetchApi<Technician[]>("/technicians");
+      setTechnicians(data);
+
+      if (!mapRef.current) return;
+
+      // Remove old markers
+      Object.values(markersRef.current).forEach((m) => mapRef.current?.removeLayer(m));
+      markersRef.current = {};
+
+      // Add new markers for technicians with valid coordinates
+      const validTechs = data.filter((t) => typeof t.lat === "number" && typeof t.lng === "number");
+      const bounds: [number, number][] = [];
+
+      for (const tech of validTechs) {
+        const marker = L.marker([tech.lat, tech.lng], { icon: makeTechIcon(tech.status) })
+          .bindPopup(makeTechPopup(tech))
+          .addTo(mapRef.current!);
+
+        marker.on("click", () => setSelected(tech));
+        markersRef.current[tech._id] = marker;
+        bounds.push([tech.lat, tech.lng]);
+      }
+
+      // Fit bounds to show all technicians
+      if (bounds.length > 0) {
+        if (bounds.length === 1) {
+          mapRef.current.setView(bounds[0], 14);
+        } else {
+          mapRef.current.fitBounds(L.latLngBounds(bounds), { padding: [50, 50], maxZoom: 15 });
+        }
+      }
+
+      mapRef.current.invalidateSize();
+    } catch {
+      /* noop */
+    }
   }, [fetchApi]);
 
-  useEffect(() => { load(); const t = setInterval(load, 15000); return () => clearInterval(t); }, [load]);
+  useEffect(() => {
+    load();
+    const t = setInterval(load, 15000);
+    return () => clearInterval(t);
+  }, [load]);
 
-  const lats = technicians.map((t) => t.lat);
-  const lngs = technicians.map((t) => t.lng);
-  const minLat = Math.min(...lats, 40.70); const maxLat = Math.max(...lats, 40.75);
-  const minLng = Math.min(...lngs, -74.03); const maxLng = Math.max(...lngs, -73.98);
+  // Pan to selected technician
+  useEffect(() => {
+    if (selected && mapRef.current && markersRef.current[selected._id]) {
+      mapRef.current.panTo([selected.lat, selected.lng], { animate: true });
+      markersRef.current[selected._id].openPopup();
+    }
+  }, [selected]);
 
   return (
     <div className="p-6 space-y-6 max-w-7xl">
@@ -59,36 +159,40 @@ export default function MapPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 glass p-0 overflow-hidden relative" style={{ minHeight: "420px" }}>
-          <div className="absolute inset-0 opacity-10"
-            style={{ backgroundImage: "repeating-linear-gradient(0deg,rgba(6,182,212,0.3) 0px,transparent 1px,transparent 60px), repeating-linear-gradient(90deg,rgba(6,182,212,0.3) 0px,transparent 1px,transparent 60px)" }} />
-
-          <div className="absolute top-4 left-4 text-cyan-400/40 text-xs font-mono">ZONE ALPHA</div>
-          <div className="absolute top-1/3 right-8 text-indigo-400/40 text-xs font-mono">ZONE DELTA</div>
-          <div className="absolute bottom-10 left-1/3 text-amber-400/40 text-xs font-mono">DEPOT HQ</div>
-
-          {technicians.map((t) => (
-            <MapDot key={t._id} tech={t} minLat={minLat} maxLat={maxLat} minLng={minLng} maxLng={maxLng} />
-          ))}
-
-          {technicians.length === 0 && (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <p className="text-slate-500 text-sm">No technicians found — add technicians on the Dashboard.</p>
+        {/* Real Leaflet Map */}
+        <div className="lg:col-span-2 glass p-0 overflow-hidden relative rounded-xl" style={{ minHeight: "500px" }}>
+          {loading && (
+            <div className="absolute inset-0 z-[1000] flex items-center justify-center bg-[#0E1521]">
+              <Loader2 className="w-8 h-8 text-cyan-400 animate-spin" />
             </div>
           )}
+          {mapError && (
+            <div className="absolute inset-0 z-[1000] flex items-center justify-center bg-[#0E1521]">
+              <div className="text-center">
+                <p className="text-rose-400 text-sm font-medium mb-2">Map failed to load</p>
+                <p className="text-slate-500 text-xs">{mapError}</p>
+              </div>
+            </div>
+          )}
+          <div ref={containerRef} className="absolute inset-0" style={{ background: "#0E1521" }} />
 
-          <div className="absolute bottom-4 right-4 glass p-3 text-xs space-y-1.5">
-            {Object.entries(statusColors).map(([status, { dot }]) => (
+          {/* Legend overlay */}
+          <div className="absolute bottom-4 right-4 z-[500] glass p-3 text-xs space-y-1.5 pointer-events-none">
+            {Object.entries(statusColors).map(([status, { hex }]) => (
               <div key={status} className="flex items-center gap-2 text-slate-400">
-                <span className={`w-2.5 h-2.5 rounded-full ${dot}`} />
+                <span className="w-2.5 h-2.5 rounded-full" style={{ background: hex }} />
                 {status.replace("-", " ")}
               </div>
             ))}
           </div>
         </div>
 
+        {/* Field Crew Sidebar */}
         <div className="glass p-5">
           <h2 className="text-white font-semibold mb-4 flex items-center gap-2"><Users className="w-4 h-4 text-cyan-400" /> Field Crew</h2>
+          {technicians.length === 0 && (
+            <p className="text-slate-600 text-sm text-center py-4">No technicians found. Add technicians from the Dashboard.</p>
+          )}
           <div className="space-y-2">
             {technicians.map((t) => {
               const colors = statusColors[t.status] ?? statusColors.idle;
@@ -106,6 +210,7 @@ export default function MapPage() {
                     <div className="mt-2 pt-2 border-t border-white/10 text-xs text-slate-400 space-y-1">
                       <div className="flex items-center gap-1.5"><Navigation className="w-3 h-3" />{t.lat.toFixed(4)}, {t.lng.toFixed(4)}</div>
                       <div><span className="text-slate-500">Location: </span>{t.location}</div>
+                      {t.currentTask && <div><span className="text-slate-500">Task: </span>{t.currentTask}</div>}
                     </div>
                   )}
                 </motion.button>
