@@ -211,7 +211,7 @@ export default function MapPage() {
             ))}
             <div className="flex items-center gap-2 text-slate-400 pt-1 border-t border-white/10">
               <span className="w-2.5 h-2.5 rounded-full border border-dashed border-rose-500/50" />
-              Stale (>5 min)
+              Stale (&gt;5 min)
             </div>
           </div>
         </div>
