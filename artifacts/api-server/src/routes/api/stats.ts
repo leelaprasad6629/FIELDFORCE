@@ -13,14 +13,15 @@ router.get("/stats", async (req: Request, res: Response) => {
   if (!auth) return;
   try {
     await dbConnect();
-    const [openRequests, activeTechnicians, inProgressTasks, totalTasks, completedTasks] = await Promise.all([
+    const [openRequests, activeTechnicians, inProgressTasks, idleTechnicians, totalTechnicians] = await Promise.all([
       ServiceRequest.countDocuments({ status: { $in: ["Pending", "Assigned", "In-Progress"] } }),
       Technician.countDocuments({ status: { $in: ["on-route", "on-site"] } }),
       Task.countDocuments({ status: "in-progress" }),
-      Task.countDocuments(),
-      Task.countDocuments({ status: "completed" }),
+      Technician.countDocuments({ status: "idle" }),
+      Technician.countDocuments({}),
     ]);
-    const dispatchReadiness = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+    // Dispatch readiness = % of fleet available for dispatch (idle / total)
+    const dispatchReadiness = totalTechnicians > 0 ? Math.round((idleTechnicians / totalTechnicians) * 100) : 0;
     res.json({ serviceRequests: openRequests, activeTechnicians, taskOverview: inProgressTasks, dispatchReadiness });
   } catch (error) {
     req.log.error({ error }, "GET /api/stats error");

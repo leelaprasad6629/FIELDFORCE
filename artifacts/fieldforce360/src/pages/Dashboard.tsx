@@ -109,6 +109,9 @@ export default function Dashboard() {
     try {
       await fetchApi(`/expenses/${id}`, { method: "PATCH", body: JSON.stringify({ status }) });
       setPendingExpenses((prev) => prev.filter((e) => e._id !== id));
+      // Reload alerts since approval/rejection now creates an alert
+      const a = await fetchApi<AlertItem[]>("/alerts?limit=20");
+      setAlerts(a);
     } catch { /* noop */ }
     finally { setApprovingExp(null); }
   }
@@ -132,7 +135,7 @@ export default function Dashboard() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-white">Operations Dashboard</h1>
-          <p className="text-slate-400 text-sm mt-1">Real-time overview · auto-refreshes every 30s</p>
+          <p className="text-slate-400 text-sm mt-1">Real-time overview · auto-refreshes every 30s{stats ? ` · ${pendingExpenses.length} pending expenses` : ""}</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <button onClick={load} className="flex items-center gap-2 px-4 py-2 rounded-lg border border-white/10 text-slate-400 text-sm hover:text-white hover:bg-white/5 transition">
@@ -166,6 +169,7 @@ export default function Dashboard() {
             <DollarSign className="w-4 h-4 text-amber-400" />
             Pending Expense Approvals
             <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30">{pendingExpenses.length}</span>
+            <span className="text-xs text-slate-500 ml-1">· ${pendingExpenses.reduce((s, e) => s + e.amount, 0).toFixed(2)} pending</span>
           </h2>
           <div className="space-y-2">
             {pendingExpenses.map((e) => (

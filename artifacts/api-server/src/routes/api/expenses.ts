@@ -4,6 +4,7 @@ import { requireApiUser, requireManagerApi } from "../../lib/clerkAuth.js";
 import dbConnect from "../../models/mongodb.js";
 import { Expense } from "../../models/Expense.js";
 import { Technician } from "../../models/Technician.js";
+import { Alert } from "../../models/Alert.js";
 
 const router = Router();
 
@@ -65,6 +66,9 @@ router.patch("/expenses/:id", async (req: Request, res: Response) => {
     const { status } = req.body;
     if (status) expense.status = status;
     await expense.save();
+    if (status === "Approved" || status === "Rejected") {
+      await Alert.create({ message: `Expense ${expense.expenseId} ($${expense.amount.toFixed(2)}) ${status.toLowerCase()} by manager`, timestamp: new Date(), type: status === "Approved" ? "info" : "warning" });
+    }
     res.json({ ...expense.toObject(), _id: String(expense._id) });
   } catch (error) {
     req.log.error({ error }, "PATCH /api/expenses/:id error");

@@ -4,6 +4,7 @@ import { requireApiUser, clerkClient } from "../../lib/clerkAuth.js";
 import dbConnect from "../../models/mongodb.js";
 import { Technician } from "../../models/Technician.js";
 import { ServiceRequest } from "../../models/ServiceRequest.js";
+import { Alert } from "../../models/Alert.js";
 
 const router = Router();
 
@@ -163,6 +164,7 @@ router.patch("/user/me/status", async (req: Request, res: Response) => {
         { assignedTechnicianId: String(technician._id), status: "Assigned" },
         { $set: { status: "In-Progress" } }
       );
+      await Alert.create({ message: `${technician.name} checked in on-site for "${technician.currentTask}"`, timestamp: new Date(), type: "info" });
     }
     res.json({ ok: true, status: technician.status });
   } catch (error) {

@@ -5,6 +5,7 @@ import { requireApiUser, requireManagerApi } from "../../lib/clerkAuth.js";
 import { Task } from "../../models/Task.js";
 import { Technician } from "../../models/Technician.js";
 import { ServiceRequest } from "../../models/ServiceRequest.js";
+import { Alert } from "../../models/Alert.js";
 
 const router = Router();
 
@@ -98,6 +99,7 @@ router.patch("/tasks/:id", async (req: Request, res: Response) => {
         }
       }
       if (task.assignedTechnicianId) await Technician.findByIdAndUpdate(task.assignedTechnicianId, { status: "idle", currentTask: null });
+      await Alert.create({ message: `Task "${task.title}" completed by ${task.assignedTo ?? "technician"}`, timestamp: new Date(), type: "info" });
     }
     await task.save();
     res.json(serializeTask(task.toObject() as Record<string, unknown>));
