@@ -1,5 +1,5 @@
-import { Switch, Route, Router as WouterRouter, useLocation, Redirect } from "wouter";
-import { ClerkProvider, SignIn, SignUp, useAuth, useClerk, useUser } from "@clerk/clerk-react";
+import { Switch, Route, Router as WouterRouter, useLocation, Redirect, Link, useRouter } from "wouter";
+import { ClerkProvider, SignIn, SignUp, useAuth, useUser } from "@clerk/clerk-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
@@ -17,11 +17,11 @@ import Expenses from "./pages/Expenses";
 const queryClient = new QueryClient();
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
-// Modal backdrop + slide-in for auth modals
+// Modal backdrop + slide-in for sign-up modal
 const backdrop = { hidden: { opacity: 0 }, visible: { opacity: 1 }, exit: { opacity: 0 } };
 const modal = { hidden: { opacity: 0, y: 24, scale: 0.97 }, visible: { opacity: 1, y: 0, scale: 1 }, exit: { opacity: 0, y: 12, scale: 0.97 } };
 
-function AuthModal({ view, onClose }: { view: "sign-up"; onClose: () => void }) {
+function SignUpModal({ onClose }: { onClose: () => void }) {
   return (
     <AnimatePresence>
       <motion.div
@@ -41,7 +41,7 @@ function AuthModal({ view, onClose }: { view: "sign-up"; onClose: () => void }) 
           className="pointer-events-auto"
           onClick={(e) => e.stopPropagation()}
         >
-          <SignUp routing="hash" afterSignUpUrl="/onboarding/role" signInUrl="#sign-in" />
+          <SignUp routing="hash" afterSignUpUrl="/onboarding/role" signInUrl="/sign-in" />
         </motion.div>
       </div>
     </AnimatePresence>
@@ -56,9 +56,37 @@ function FullScreenLoader() {
   );
 }
 
+// Full-page sign-in route
+function SignInPage() {
+  return (
+    <div className="min-h-screen flex items-center justify-center px-4" style={{ background: "#080C14" }}>
+      <div className="w-full max-w-md">
+        <Link href="/" className="block text-center mb-6 text-slate-400 hover:text-white transition text-sm">
+          ← Back to home
+        </Link>
+        <SignIn routing="hash" afterSignInUrl="/dashboard" signUpUrl="/sign-up" />
+      </div>
+    </div>
+  );
+}
+
+// Full-page sign-up route
+function SignUpPage() {
+  return (
+    <div className="min-h-screen flex items-center justify-center px-4" style={{ background: "#080C14" }}>
+      <div className="w-full max-w-md">
+        <Link href="/" className="block text-center mb-6 text-slate-400 hover:text-white transition text-sm">
+          ← Back to home
+        </Link>
+        <SignUp routing="hash" afterSignUpUrl="/onboarding/role" signInUrl="/sign-in" />
+      </div>
+    </div>
+  );
+}
+
 function PublicLanding() {
   const { isSignedIn, isLoaded } = useAuth();
-  const { openSignIn } = useClerk();
+  const [, navigate] = useLocation();
   const [showSignUp, setShowSignUp] = useState(false);
 
   if (isLoaded && isSignedIn) return <Redirect to="/dashboard" />;
@@ -66,7 +94,7 @@ function PublicLanding() {
   return (
     <div className="relative">
       <Landing
-        onSignIn={() => openSignIn({ forceRedirectUrl: "/dashboard" })}
+        onSignIn={() => navigate("/sign-in")}
         onSignUp={() => setShowSignUp(true)}
         authReady={isLoaded}
       />
@@ -74,7 +102,7 @@ function PublicLanding() {
       {!isLoaded && <FullScreenLoader />}
 
       {showSignUp && isLoaded && (
-        <AuthModal view="sign-up" onClose={() => setShowSignUp(false)} />
+        <SignUpModal onClose={() => setShowSignUp(false)} />
       )}
     </div>
   );
@@ -92,7 +120,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   if (!isSignedIn) return <Redirect to="/" />;
 
   const role = user?.publicMetadata?.role as string | undefined;
-  const publicPaths = ["/", "/onboarding/role"];
+  const publicPaths = ["/", "/sign-in", "/sign-up", "/onboarding/role"];
   if (!role && !publicPaths.includes(location)) {
     return <Redirect to="/onboarding/role" />;
   }
@@ -120,6 +148,14 @@ function AppRoutes() {
     <Switch>
       <Route path="/">
         <PublicLanding />
+      </Route>
+
+      <Route path="/sign-in">
+        <SignInPage />
+      </Route>
+
+      <Route path="/sign-up">
+        <SignUpPage />
       </Route>
 
       <Route path="/onboarding/role">
