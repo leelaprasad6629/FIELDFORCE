@@ -1,7 +1,7 @@
 import { Router } from "express";
 import type { Request, Response } from "express";
 import dbConnect from "../../models/mongodb.js";
-import { requireApiUser } from "../../lib/clerkAuth.js";
+import { requireManagerApi } from "../../lib/clerkAuth.js";
 import { Task } from "../../models/Task.js";
 
 const router = Router();
@@ -13,7 +13,7 @@ function average(values: number[]) {
 }
 
 router.get("/analytics", async (req: Request, res: Response) => {
-  const auth = await requireApiUser(req, res);
+  const auth = await requireManagerApi(req, res);
   if (!auth) return;
   try {
     await dbConnect();

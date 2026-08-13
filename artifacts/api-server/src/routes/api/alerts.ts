@@ -1,13 +1,13 @@
 import { Router } from "express";
 import type { Request, Response } from "express";
 import dbConnect from "../../models/mongodb.js";
-import { requireApiUser } from "../../lib/clerkAuth.js";
+import { requireManagerApi } from "../../lib/clerkAuth.js";
 import { Alert } from "../../models/Alert.js";
 
 const router = Router();
 
 router.get("/alerts", async (req: Request, res: Response) => {
-  const auth = await requireApiUser(req, res);
+  const auth = await requireManagerApi(req, res);
   if (!auth) return;
   try {
     await dbConnect();
@@ -26,9 +26,8 @@ router.get("/alerts", async (req: Request, res: Response) => {
 });
 
 router.delete("/alerts/:id", async (req: Request, res: Response) => {
-  const auth = await requireApiUser(req, res);
+  const auth = await requireManagerApi(req, res);
   if (!auth) return;
-  if (auth.role !== "manager") { res.status(403).json({ error: "Forbidden" }); return; }
   try {
     await dbConnect();
     await Alert.deleteOne({ _id: req.params.id });

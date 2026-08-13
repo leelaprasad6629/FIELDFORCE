@@ -1,7 +1,7 @@
 import { Router } from "express";
 import type { Request, Response } from "express";
 import dbConnect from "../../models/mongodb.js";
-import { requireApiUser, requireManagerApi } from "../../lib/clerkAuth.js";
+import { requireManagerApi } from "../../lib/clerkAuth.js";
 import { ServiceRequest } from "../../models/ServiceRequest.js";
 import { Technician } from "../../models/Technician.js";
 import { Task } from "../../models/Task.js";
@@ -40,7 +40,7 @@ function serializeRequest(doc: Record<string, unknown>) {
 }
 
 router.get("/requests", async (req: Request, res: Response) => {
-  const auth = await requireApiUser(req, res);
+  const auth = await requireManagerApi(req, res);
   if (!auth) return;
   try {
     await dbConnect();
@@ -53,9 +53,8 @@ router.get("/requests", async (req: Request, res: Response) => {
 });
 
 router.post("/requests", async (req: Request, res: Response) => {
-  const auth = await requireApiUser(req, res);
+  const auth = await requireManagerApi(req, res);
   if (!auth) return;
-  if (auth.role !== "manager") { res.status(403).json({ error: "Forbidden" }); return; }
   try {
     await dbConnect();
     const { title, description, customerName, category, priority, location, geofenceLocation, eta } = req.body;

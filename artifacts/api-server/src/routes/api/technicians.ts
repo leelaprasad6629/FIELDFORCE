@@ -62,7 +62,8 @@ router.patch("/technicians/:id", async (req: Request, res: Response) => {
     await dbConnect();
     const technician = await Technician.findById(req.params.id);
     if (!technician) { res.status(404).json({ error: "Technician not found" }); return; }
-    if (auth.role === "technician" && technician.clerkUserId && technician.clerkUserId !== auth.userId) {
+    // Technicians can only modify their own linked record; managers can modify any
+    if (auth.role === "technician" && (!technician.clerkUserId || technician.clerkUserId !== auth.userId)) {
       res.status(403).json({ error: "Forbidden" }); return;
     }
     const { status, lat, lng, location, currentTask, email, phone } = req.body;
@@ -71,9 +72,12 @@ router.patch("/technicians/:id", async (req: Request, res: Response) => {
     if (typeof lat === "number") technician.lat = lat;
     if (typeof lng === "number") technician.lng = lng;
     if (location) technician.location = location;
-    if (currentTask !== undefined) technician.currentTask = currentTask;
-    if (email !== undefined) technician.email = email;
-    if (phone !== undefined) technician.phone = phone;
+    // currentTask, email, and phone are manager-only fields
+    if (auth.role === "manager") {
+      if (currentTask !== undefined) technician.currentTask = currentTask;
+      if (email !== undefined) technician.email = email;
+      if (phone !== undefined) technician.phone = phone;
+    }
     await technician.save();
     res.json(serialize(technician.toObject() as Record<string, unknown>));
   } catch (error) {
