@@ -177,3 +177,25 @@ button, input, textarea, select {
   background: transparent;
   border: none;
 }
+
+/* Marker pulse animation for Leaflet DivIcons */
+@keyframes tech-pulse {
+  0% { transform: scale(1); opacity: 0.6; }
+  75%, 100% { transform: scale(2.2); opacity: 0; }
+}
+
+.tech-marker-pulse {
+  animation: tech-pulse 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+/* Ensure leaflet panes have proper z-index ordering */
+.leaflet-pane { z-index: auto; }
+.leaflet-map-pane { z-index: auto; }
+.leaflet-tile-pane { z-index: 1; }
+.leaflet-overlay-pane { z-index: 2; }
+.leaflet-shadow-pane { z-index: 3; }
+.leaflet-marker-pane { z-index: 4; }
+.leaflet-popup-pane { z-index: 5; }
+
+/* Smooth marker transitions */
+.tech-marker img { display: none; }
