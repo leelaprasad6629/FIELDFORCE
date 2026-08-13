@@ -1,5 +1,5 @@
 import { Switch, Route, Router as WouterRouter, useLocation, Redirect } from "wouter";
-import { ClerkProvider, SignIn, SignUp, useAuth, useUser } from "@clerk/clerk-react";
+import { ClerkProvider, SignIn, SignUp, useAuth, useClerk, useUser } from "@clerk/clerk-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
@@ -21,7 +21,7 @@ const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 const backdrop = { hidden: { opacity: 0 }, visible: { opacity: 1 }, exit: { opacity: 0 } };
 const modal = { hidden: { opacity: 0, y: 24, scale: 0.97 }, visible: { opacity: 1, y: 0, scale: 1 }, exit: { opacity: 0, y: 12, scale: 0.97 } };
 
-function AuthModal({ view, onClose }: { view: "sign-in" | "sign-up"; onClose: () => void }) {
+function AuthModal({ view, onClose }: { view: "sign-up"; onClose: () => void }) {
   return (
     <AnimatePresence>
       <motion.div
@@ -41,10 +41,7 @@ function AuthModal({ view, onClose }: { view: "sign-in" | "sign-up"; onClose: ()
           className="pointer-events-auto"
           onClick={(e) => e.stopPropagation()}
         >
-          {view === "sign-in"
-            ? <SignIn routing="hash" afterSignInUrl="/dashboard" signUpUrl="#sign-up" />
-            : <SignUp routing="hash" afterSignUpUrl="/onboarding/role" signInUrl="#sign-in" />
-          }
+          <SignUp routing="hash" afterSignUpUrl="/onboarding/role" signInUrl="#sign-in" />
         </motion.div>
       </div>
     </AnimatePresence>
@@ -61,28 +58,23 @@ function FullScreenLoader() {
 
 function PublicLanding() {
   const { isSignedIn, isLoaded } = useAuth();
-  const [authView, setAuthView] = useState<"sign-in" | "sign-up" | null>(null);
+  const { openSignIn } = useClerk();
+  const [showSignUp, setShowSignUp] = useState(false);
 
-  // Only redirect if Clerk is loaded AND user is signed in.
-  // Do NOT conditionally render/unmount the Landing — that's what causes the race condition
-  // where the first click is lost during the mount transition.
   if (isLoaded && isSignedIn) return <Redirect to="/dashboard" />;
 
   return (
     <div className="relative">
-      {/* Landing is ALWAYS mounted — its event handlers stay active */}
       <Landing
-        onSignIn={() => setAuthView("sign-in")}
-        onSignUp={() => setAuthView("sign-up")}
+        onSignIn={() => openSignIn({ forceRedirectUrl: "/dashboard" })}
+        onSignUp={() => setShowSignUp(true)}
         authReady={isLoaded}
       />
 
-      {/* Loader overlays on top while Clerk initializes, then disappears */}
       {!isLoaded && <FullScreenLoader />}
 
-      {/* Auth modal only renders when Clerk is fully loaded */}
-      {authView && isLoaded && (
-        <AuthModal view={authView} onClose={() => setAuthView(null)} />
+      {showSignUp && isLoaded && (
+        <AuthModal view="sign-up" onClose={() => setShowSignUp(false)} />
       )}
     </div>
   );
