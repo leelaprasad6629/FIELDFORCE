@@ -37,7 +37,7 @@ const TaskSchema = new Schema<ITask>({
   assignedTo: { type: String, default: null },
   assignedTechnicianId: { type: String, default: null },
   serviceRequestId: { type: String, default: null },
-  status: { type: String, required: true, enum: ["pending", "in-progress", "completed"], default: "pending" },
+  status: { type: String, required: true, enum: ["pending", "in-progress", "completed", "cancelled"], default: "pending" },
   zone: { type: String, required: true },
   location: { type: String, required: true },
   priority: { type: String, required: true, enum: ["low", "medium", "high", "critical"], default: "medium" },

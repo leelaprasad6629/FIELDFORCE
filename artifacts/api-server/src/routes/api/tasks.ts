@@ -39,7 +39,7 @@ router.get("/tasks", async (req: Request, res: Response) => {
     if (mine && auth.role === "technician") {
       const technician = await Technician.findOne({ clerkUserId: auth.userId });
       if (!technician) { res.json([]); return; }
-      filter = { assignedTechnicianId: String(technician._id), status: { $ne: "completed" } };
+      filter = { assignedTechnicianId: String(technician._id), status: { $nin: ["completed", "cancelled"] } };
     }
     const tasks = await Task.find(filter).sort({ createdAt: -1 }).lean();
     res.json(tasks.map((d) => serializeTask(d as Record<string, unknown>)));
@@ -87,7 +87,15 @@ router.patch("/tasks/:id", async (req: Request, res: Response) => {
     if (req.body.action === "complete") {
       task.status = "completed";
       task.completedAt = new Date();
-      if (task.serviceRequestId) await ServiceRequest.findByIdAndUpdate(task.serviceRequestId, { status: "Completed", completedAt: new Date() });
+      // Only update ServiceRequest to Completed if it's not cancelled
+      if (task.serviceRequestId) {
+        const sr = await ServiceRequest.findById(task.serviceRequestId);
+        if (sr && sr.status !== "Cancelled") {
+          sr.status = "Completed";
+          sr.completedAt = new Date();
+          await sr.save();
+        }
+      }
       if (task.assignedTechnicianId) await Technician.findByIdAndUpdate(task.assignedTechnicianId, { status: "idle", currentTask: null });
     }
     await task.save();

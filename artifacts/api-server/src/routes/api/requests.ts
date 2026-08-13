@@ -89,6 +89,15 @@ router.patch("/requests/:id", async (req: Request, res: Response) => {
     if (status && VALID_STATUS.includes(status)) {
       serviceRequest.status = status;
       if (status === "Completed") serviceRequest.completedAt = new Date();
+      // When cancelling, clean up associated task and free the technician
+      if (status === "Cancelled" && serviceRequest.assignedTechnicianId) {
+        await Task.updateMany(
+          { serviceRequestId: String(serviceRequest._id), status: { $ne: "completed" } },
+          { $set: { status: "cancelled" } }
+        );
+        await Technician.findByIdAndUpdate(serviceRequest.assignedTechnicianId, { status: "idle", currentTask: null });
+        await Alert.create({ message: `Request "${serviceRequest.title}" cancelled — technician released`, timestamp: new Date(), type: "warning" });
+      }
     }
     if (priority) serviceRequest.priority = priority;
     if (description) serviceRequest.description = description;
