@@ -70,6 +70,8 @@ export default function MapPage() {
   const [selected, setSelected] = useState<Technician | null>(null);
   const [loading, setLoading] = useState(true);
   const [mapError, setMapError] = useState<string | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   const mapRef = useRef<L.Map | null>(null);
   const markersRef = useRef<Record<string, L.Marker>>({});
@@ -114,6 +116,7 @@ export default function MapPage() {
   }, []);
 
   const load = useCallback(async () => {
+    setRefreshing(true);
     try {
       const data = await fetchApi<Technician[]>("/technicians");
       setTechnicians(data);
@@ -148,9 +151,10 @@ export default function MapPage() {
       }
 
       mapRef.current.invalidateSize();
+      setLastUpdated(new Date());
     } catch {
       /* noop */
-    }
+    } finally { setRefreshing(false); }
   }, [fetchApi]);
 
   useEffect(() => {
@@ -172,10 +176,10 @@ export default function MapPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white flex items-center gap-2"><Map className="w-5 h-5 text-cyan-400" /> Live Fleet Map</h1>
-          <p className="text-slate-400 text-sm mt-1">Technician positions update every 15 seconds</p>
+          <p className="text-slate-400 text-sm mt-1">Technician positions update every 15s{lastUpdated ? ` · updated ${lastUpdated.toLocaleTimeString()}` : ""}</p>
         </div>
         <button onClick={load} className="flex items-center gap-2 px-4 py-2 rounded-lg border border-white/10 text-slate-400 text-sm hover:text-white hover:bg-white/5 transition">
-          <RefreshCw className="w-4 h-4" /> Refresh
+          <RefreshCw className={cn("w-4 h-4", refreshing && "animate-spin")} /> Refresh
         </button>
       </div>
 

@@ -1,8 +1,9 @@
 import { useEffect, useState, useCallback } from "react";
 import { motion } from "framer-motion";
-import { BarChart2, TrendingUp, Clock, Zap, RefreshCw, DollarSign } from "lucide-react";
+import { BarChart2, TrendingUp, Clock, Zap, RefreshCw, DollarSign, Loader2 } from "lucide-react";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, LineChart, Line, CartesianGrid } from "recharts";
 import { useApi } from "../lib/api";
+import { cn } from "../lib/utils";
 
 interface AnalyticsData {
   hasEnoughData: boolean; predictedCsat: number | null; predictiveAccuracy: number | null;
@@ -27,9 +28,17 @@ const tooltipStyle = { backgroundColor: "#0E1521", border: "1px solid rgba(255,2
 export default function Analytics() {
   const { fetchApi } = useApi();
   const [data, setData] = useState<AnalyticsData | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [initialLoad, setInitialLoad] = useState(true);
 
   const load = useCallback(async () => {
-    try { setData(await fetchApi<AnalyticsData>("/analytics")); } catch { /* noop */ }
+    setRefreshing(true);
+    try {
+      setData(await fetchApi<AnalyticsData>("/analytics"));
+      setLastUpdated(new Date());
+    } catch { /* noop */ }
+    finally { setRefreshing(false); setInitialLoad(false); }
   }, []);
 
   useEffect(() => {
@@ -54,13 +63,17 @@ export default function Analytics() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white flex items-center gap-2"><BarChart2 className="w-5 h-5 text-cyan-400" /> Predictive Analytics</h1>
-          <p className="text-slate-400 text-sm mt-1">AI-powered field operations insights</p>
+          <p className="text-slate-400 text-sm mt-1">AI-powered field operations insights · auto-refreshes every 60s{lastUpdated ? ` · updated ${lastUpdated.toLocaleTimeString()}` : ""}</p>
         </div>
         <button onClick={load} className="flex items-center gap-2 px-4 py-2 rounded-lg border border-white/10 text-slate-400 text-sm hover:text-white hover:bg-white/5 transition">
-          <RefreshCw className="w-4 h-4" /> Refresh
+          <RefreshCw className={cn("w-4 h-4", refreshing && "animate-spin")} /> Refresh
         </button>
       </div>
 
+      {initialLoad ? (
+        <div className="flex items-center justify-center py-20"><Loader2 className="w-8 h-8 text-cyan-400 animate-spin" /></div>
+      ) : (
+      <>
       {isMock && (
         <div className="glass border-amber-500/30 bg-amber-500/8 px-4 py-3 text-amber-400/80 text-sm rounded-xl">
           Showing sample data — complete tasks to see real metrics.
@@ -138,6 +151,8 @@ export default function Analytics() {
             <p className="text-slate-500 text-xs mt-1">week over week</p>
           </div>
         </div>
+      )}
+      </>
       )}
     </div>
   );

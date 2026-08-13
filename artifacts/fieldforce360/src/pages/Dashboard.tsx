@@ -66,8 +66,12 @@ export default function Dashboard() {
   const [addingTech, setAddingTech] = useState(false);
   const [techError, setTechError] = useState<string | null>(null);
   const [approvingExp, setApprovingExp] = useState<string | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [initialLoad, setInitialLoad] = useState(true);
 
   const load = useCallback(async () => {
+    setRefreshing(true);
     try {
       const [s, a, t, e] = await Promise.all([
         fetchApi<Stats>("/stats"),
@@ -79,7 +83,9 @@ export default function Dashboard() {
       setAlerts(a);
       setTechnicians(t);
       setPendingExpenses(e.filter((exp) => exp.status === "Pending"));
+      setLastUpdated(new Date());
     } catch { /* empty state shown */ }
+    finally { setRefreshing(false); setInitialLoad(false); }
   }, [fetchApi]);
 
   useEffect(() => {
@@ -136,11 +142,11 @@ export default function Dashboard() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-white">Operations Dashboard</h1>
-          <p className="text-slate-400 text-sm mt-1">Real-time overview · auto-refreshes every 30s{stats ? ` · ${pendingExpenses.length} pending expenses` : ""}</p>
+          <p className="text-slate-400 text-sm mt-1">Real-time overview · auto-refreshes every 30s{stats ? ` · ${pendingExpenses.length} pending expenses` : ""}{lastUpdated ? ` · updated ${lastUpdated.toLocaleTimeString()}` : ""}</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <button onClick={load} className="flex items-center gap-2 px-4 py-2 rounded-lg border border-white/10 text-slate-400 text-sm hover:text-white hover:bg-white/5 transition">
-            <RefreshCw className="w-4 h-4" /> Refresh
+            <RefreshCw className={cn("w-4 h-4", refreshing && "animate-spin")} /> Refresh
           </button>
           <button onClick={() => setShowAddTech(true)} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-sm hover:bg-emerald-500/25 transition">
             <Plus className="w-4 h-4" /> Add Technician
@@ -148,6 +154,10 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {initialLoad ? (
+        <div className="flex items-center justify-center py-20"><Loader2 className="w-8 h-8 text-cyan-400 animate-spin" /></div>
+      ) : (
+      <>
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {statCards.map(({ label, value, icon: Icon, color, bg }, i) => (
@@ -348,6 +358,8 @@ export default function Dashboard() {
           </>
         )}
       </AnimatePresence>
+      </>
+      )}
     </div>
   );
 }

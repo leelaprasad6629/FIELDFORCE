@@ -41,6 +41,9 @@ type Filter = "All" | "Pending" | "Assigned" | "In-Progress" | "Completed";
 
 export default function Requests() {
   const { fetchApi } = useApi();
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [initialLoad, setInitialLoad] = useState(true);
   const [requests, setRequests] = useState<ServiceRequest[]>([]);
   const [filter, setFilter] = useState<Filter>("All");
   const [assigning, setAssigning] = useState<string | null>(null);
@@ -114,11 +117,11 @@ export default function Requests() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white flex items-center gap-2"><ClipboardList className="w-5 h-5 text-cyan-400" /> Service Requests</h1>
-          <p className="text-slate-400 text-sm mt-1">{requests.length} total · auto-refreshes every 20s</p>
+          <p className="text-slate-400 text-sm mt-1">{requests.length} total · auto-refreshes every 20s{lastUpdated ? ` · updated ${lastUpdated.toLocaleTimeString()}` : ""}</p>
         </div>
         <div className="flex gap-2">
           <button onClick={load} className="flex items-center gap-2 px-4 py-2 rounded-lg border border-white/10 text-slate-400 text-sm hover:text-white hover:bg-white/5 transition">
-            <RefreshCw className="w-4 h-4" />
+            <RefreshCw className={cn("w-4 h-4", refreshing && "animate-spin")} />
           </button>
           <button onClick={() => setShowForm(true)} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-cyan-500/15 border border-cyan-500/30 text-cyan-400 text-sm hover:bg-cyan-500/25 transition">
             <Plus className="w-4 h-4" /> New Request
@@ -126,6 +129,10 @@ export default function Requests() {
         </div>
       </div>
 
+      {initialLoad ? (
+        <div className="flex items-center justify-center py-20"><Loader2 className="w-8 h-8 text-cyan-400 animate-spin" /></div>
+      ) : (
+      <>
       {/* Filter Tabs */}
       <div className="flex flex-wrap gap-2">
         {FILTERS.map((f) => {
@@ -287,6 +294,8 @@ export default function Requests() {
           </>
         )}
       </AnimatePresence>
+      </>
+      )}
     </div>
   );
 }

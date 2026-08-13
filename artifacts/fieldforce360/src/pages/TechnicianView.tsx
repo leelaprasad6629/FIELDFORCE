@@ -47,8 +47,11 @@ export default function TechnicianView() {
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
   const [online, setOnline] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [initialLoad, setInitialLoad] = useState(true);
 
   const load = useCallback(async () => {
+    setRefreshing(true);
     try {
       const [t, e, me] = await Promise.all([
         fetchApi<Task[]>("/tasks?mine=true"),
@@ -62,7 +65,7 @@ export default function TechnicianView() {
       setOnline(true);
     } catch {
       setOnline(false);
-    }
+    } finally { setRefreshing(false); setInitialLoad(false); }
   }, [fetchApi]);
 
   useEffect(() => {
@@ -140,6 +143,10 @@ export default function TechnicianView() {
 
   const currentStatus = profile?.status ?? "idle";
 
+  if (initialLoad) {
+    return <div className="flex items-center justify-center py-20"><Loader2 className="w-8 h-8 text-cyan-400 animate-spin" /></div>;
+  }
+
   return (
     <div className="p-6 space-y-6 max-w-4xl">
       <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -151,7 +158,7 @@ export default function TechnicianView() {
           </p>
         </div>
         <button onClick={load} className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-white/10 text-slate-400 text-xs hover:text-white hover:bg-white/5 transition">
-          <RefreshCw className="w-3.5 h-3.5" /> Refresh
+          <RefreshCw className={cn("w-3.5 h-3.5", refreshing && "animate-spin")} /> Refresh
         </button>
       </div>
 
