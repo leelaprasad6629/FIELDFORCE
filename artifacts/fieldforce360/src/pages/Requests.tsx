@@ -50,6 +50,7 @@ export default function Requests() {
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [cancelling, setCancelling] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try { setRequests(await fetchApi<ServiceRequest[]>("/requests")); } catch { /* noop */ }
@@ -81,6 +82,16 @@ export default function Requests() {
     } catch (e: unknown) {
       alert(e instanceof Error ? e.message : "Delete failed");
     } finally { setDeleting(null); }
+  }
+
+  async function cancelRequest(id: string) {
+    setCancelling(id);
+    try {
+      const updated = await fetchApi<ServiceRequest>(`/requests/${id}`, { method: "PATCH", body: JSON.stringify({ status: "Cancelled" }) });
+      setRequests((prev) => prev.map((r) => r._id === id ? updated : r));
+    } catch (e: unknown) {
+      alert(e instanceof Error ? e.message : "Cancel failed");
+    } finally { setCancelling(null); }
   }
 
   async function create() {
@@ -193,6 +204,12 @@ export default function Requests() {
                   </button>
                 )}
                 {r.status === "Completed" && <CheckCircle className="w-5 h-5 text-emerald-400 mt-0.5" />}
+                {(r.status === "Assigned" || r.status === "In-Progress") && (
+                  <button onClick={() => cancelRequest(r._id)} disabled={cancelling === r._id}
+                    className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg text-amber-400 hover:bg-amber-500/10 border border-amber-500/20 transition disabled:opacity-40">
+                    {cancelling === r._id ? <Loader2 className="w-3 h-3 animate-spin" /> : <X className="w-3 h-3" />} Cancel
+                  </button>
+                )}
                 {(r.status === "Pending" || r.status === "Completed" || r.status === "Cancelled") && (
                   <button onClick={() => deleteRequest(r._id)} disabled={deleting === r._id}
                     className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg text-slate-600 hover:text-rose-400 hover:bg-rose-500/10 border border-white/5 transition disabled:opacity-40">

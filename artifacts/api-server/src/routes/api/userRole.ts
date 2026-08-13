@@ -3,6 +3,7 @@ import type { Request, Response } from "express";
 import { requireApiUser, clerkClient } from "../../lib/clerkAuth.js";
 import dbConnect from "../../models/mongodb.js";
 import { Technician } from "../../models/Technician.js";
+import { ServiceRequest } from "../../models/ServiceRequest.js";
 
 const router = Router();
 
@@ -140,6 +141,7 @@ router.get("/user/me", async (req: Request, res: Response) => {
 });
 
 // Technician updates their own status (e.g. on-site check-in)
+// Also transitions associated ServiceRequest to "In-Progress" when checking in on-site
 router.patch("/user/me/status", async (req: Request, res: Response) => {
   const auth = await requireApiUser(req, res);
   if (!auth) return;
@@ -154,6 +156,13 @@ router.patch("/user/me/status", async (req: Request, res: Response) => {
     if (typeof lat === "number") technician.lat = lat;
     if (typeof lng === "number") technician.lng = lng;
     await technician.save();
+    // When technician checks in on-site, transition assigned ServiceRequest to In-Progress
+    if (status === "on-site" && technician.currentTask) {
+      await ServiceRequest.updateMany(
+        { assignedTechnicianId: String(technician._id), status: "Assigned" },
+        { $set: { status: "In-Progress" } }
+      );
+    }
     res.json({ ok: true, status: technician.status });
   } catch (error) {
     req.log.error({ error }, "PATCH /api/user/me/status error");

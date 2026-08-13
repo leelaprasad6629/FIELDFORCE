@@ -25,7 +25,7 @@ const ServiceRequestSchema = new Schema<IServiceRequest>({
   description: { type: String, required: true },
   customerName: { type: String, required: true },
   category: { type: String, required: true, default: "General" },
-  status: { type: String, required: true, enum: ["Pending", "Assigned", "In-Progress", "Completed"], default: "Pending" },
+  status: { type: String, required: true, enum: ["Pending", "Assigned", "In-Progress", "Completed", "Cancelled"], default: "Pending" },
   priority: { type: String, required: true, enum: ["Low", "Medium", "High", "Critical"], default: "Medium" },
   geofenceLocation: {
     lat: { type: Number, required: true },
