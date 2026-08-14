@@ -41,7 +41,7 @@ function SignUpModal({ onClose }: { onClose: () => void }) {
           className="pointer-events-auto"
           onClick={(e) => e.stopPropagation()}
         >
-          <SignUp routing="virtual" afterSignUpUrl="/onboarding/role" signInUrl="/sign-in" />
+          <SignUp routing="virtual" fallbackRedirectUrl="/onboarding/role" signInUrl="/sign-in" />
         </motion.div>
       </div>
     </AnimatePresence>
@@ -64,7 +64,7 @@ function SignInPage() {
         <Link href="/" className="block text-center mb-6 text-slate-400 hover:text-white transition text-sm">
           ← Back to home
         </Link>
-        <SignIn routing="virtual" afterSignInUrl="/dashboard" signUpUrl="/sign-up" />
+        <SignIn routing="virtual" fallbackRedirectUrl="/dashboard" signUpUrl="/sign-up" />
       </div>
     </div>
   );
@@ -78,7 +78,7 @@ function SignUpPage() {
         <Link href="/" className="block text-center mb-6 text-slate-400 hover:text-white transition text-sm">
           ← Back to home
         </Link>
-        <SignUp routing="virtual" afterSignUpUrl="/onboarding/role" signInUrl="/sign-in" />
+        <SignUp routing="virtual" fallbackRedirectUrl="/onboarding/role" signInUrl="/sign-in" />
       </div>
     </div>
   );

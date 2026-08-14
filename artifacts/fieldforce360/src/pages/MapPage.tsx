@@ -4,6 +4,7 @@ import { Map as MapIcon, RefreshCw, Users, Navigation, Loader2, Layers, Maximize
 import { useApi } from "../lib/api";
 import { cn } from "../lib/utils";
 import * as L from "leaflet";
+import "leaflet/dist/leaflet.css";
 
 interface Technician {
   _id: string; name: string; status: string; location: string;
