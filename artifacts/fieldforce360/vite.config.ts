@@ -7,12 +7,20 @@ import path from "path";
 const port = Number(process.env.PORT) || 3000;
 const basePath = process.env.BASE_PATH || "/";
 
+// Clerk publishable key — public by design (embedded in client bundle anyway).
+// Falls back to the dev key so the app builds even if the env var isn't set on Vercel.
+// When you set VITE_CLERK_PUBLISHABLE_KEY on Vercel with a pk_live_ key, it overrides this.
+const CLERK_PK = process.env.VITE_CLERK_PUBLISHABLE_KEY ?? process.env.CLERK_PUBLISHABLE_KEY ?? "pk_test_aHVtYW5lLWpheS0yNC5jbGVyay5hY2NvdW50cy5kZXYk";
+
 export default defineConfig({
   base: basePath,
   plugins: [
     react(),
     tailwindcss(),
   ],
+  define: {
+    "import.meta.env.VITE_CLERK_PUBLISHABLE_KEY": JSON.stringify(CLERK_PK),
+  },
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "src"),
