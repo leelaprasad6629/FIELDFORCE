@@ -17,6 +17,12 @@ export async function requireApiUser(
     }
     const token = authHeader.slice(7);
 
+    if (!process.env.CLERK_SECRET_KEY) {
+      console.error("[clerkAuth] CLERK_SECRET_KEY is not set — token verification impossible");
+      res.status(500).json({ error: "Server misconfigured: CLERK_SECRET_KEY not set" });
+      return null;
+    }
+
     const payload = await verifyToken(token, {
       secretKey: process.env.CLERK_SECRET_KEY,
     });
@@ -40,7 +46,8 @@ export async function requireApiUser(
     }
 
     return { userId, role, email };
-  } catch {
+  } catch (err) {
+    console.error("[clerkAuth] Token verification failed:", err instanceof Error ? err.message : String(err));
     res.status(401).json({ error: "Unauthorized" });
     return null;
   }

@@ -17,17 +17,6 @@ import Expenses from "./pages/Expenses";
 const queryClient = new QueryClient();
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
-/**
- * Clerk ↔ wouter integration.
- * Clerk needs a navigate() function for post-auth redirects (afterSignInUrl, etc).
- * We push to history and dispatch a popstate so wouter picks up the route change
- * without a full page reload.
- */
-function clerkNavigate(to: string) {
-  window.history.pushState(null, "", to);
-  window.dispatchEvent(new PopStateEvent("popstate"));
-}
-
 // Modal backdrop + slide-in for sign-up modal
 const backdrop = { hidden: { opacity: 0 }, visible: { opacity: 1 }, exit: { opacity: 0 } };
 const modal = { hidden: { opacity: 0, y: 24, scale: 0.97 }, visible: { opacity: 1, y: 0, scale: 1 }, exit: { opacity: 0, y: 12, scale: 0.97 } };
@@ -245,7 +234,16 @@ function AppRoutes() {
   );
 }
 
-function App() {
+/**
+ * AppInner lives INSIDE WouterRouter so we can get wouter's navigate()
+ * and pass it directly to ClerkProvider. This is the proper Clerk ↔ wouter
+ * integration: Clerk calls wouter's navigate() for post-auth redirects,
+ * instead of a manual pushState + popstate hack that can race with
+ * Clerk's own state updates.
+ */
+function AppInner() {
+  const [, wouterNavigate] = useLocation();
+
   if (!PUBLISHABLE_KEY) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: "#080C14" }}>
@@ -258,13 +256,19 @@ function App() {
   }
 
   return (
-    <ClerkProvider publishableKey={PUBLISHABLE_KEY} navigate={clerkNavigate} afterSignOutUrl="/">
+    <ClerkProvider publishableKey={PUBLISHABLE_KEY} navigate={wouterNavigate} afterSignOutUrl="/">
       <QueryClientProvider client={queryClient}>
-        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-          <AppRoutes />
-        </WouterRouter>
+        <AppRoutes />
       </QueryClientProvider>
     </ClerkProvider>
+  );
+}
+
+function App() {
+  return (
+    <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+      <AppInner />
+    </WouterRouter>
   );
 }
 
