@@ -58,13 +58,16 @@ function FullScreenLoader() {
 
 // Full-page sign-in route
 function SignInPage() {
+  const { isSignedIn, isLoaded } = useAuth();
+  if (isLoaded && isSignedIn) return <Redirect to="/dashboard" />;
+
   return (
     <div className="min-h-screen flex items-center justify-center px-4" style={{ background: "#080C14" }}>
       <div className="w-full max-w-md">
         <Link href="/" className="block text-center mb-6 text-slate-400 hover:text-white transition text-sm">
           ← Back to home
         </Link>
-        <SignIn routing="virtual" fallbackRedirectUrl="/dashboard" signUpUrl="/sign-up" />
+        <SignIn routing="virtual" fallbackRedirectUrl="/dashboard" forceRedirectUrl="/dashboard" signUpUrl="/sign-up" />
       </div>
     </div>
   );
@@ -72,13 +75,16 @@ function SignInPage() {
 
 // Full-page sign-up route
 function SignUpPage() {
+  const { isSignedIn, isLoaded } = useAuth();
+  if (isLoaded && isSignedIn) return <Redirect to="/dashboard" />;
+
   return (
     <div className="min-h-screen flex items-center justify-center px-4" style={{ background: "#080C14" }}>
       <div className="w-full max-w-md">
         <Link href="/" className="block text-center mb-6 text-slate-400 hover:text-white transition text-sm">
           ← Back to home
         </Link>
-        <SignUp routing="virtual" fallbackRedirectUrl="/onboarding/role" signInUrl="/sign-in" />
+        <SignUp routing="virtual" fallbackRedirectUrl="/onboarding/role" forceRedirectUrl="/onboarding/role" signInUrl="/sign-in" />
       </div>
     </div>
   );
@@ -256,7 +262,13 @@ function AppInner() {
   }
 
   return (
-    <ClerkProvider publishableKey={PUBLISHABLE_KEY} navigate={wouterNavigate} afterSignOutUrl="/">
+    <ClerkProvider
+      publishableKey={PUBLISHABLE_KEY}
+      routerPush={(to) => wouterNavigate(to)}
+      routerReplace={(to) => wouterNavigate(to, { replace: true })}
+      navigate={wouterNavigate}
+      afterSignOutUrl="/"
+    >
       <QueryClientProvider client={queryClient}>
         <AppRoutes />
       </QueryClientProvider>
