@@ -15,11 +15,7 @@
       "destination": "/api/index"
     },
     {
-      "source": "/__clerk/(.*)",
-      "destination": "https://frontend-api.clerk.services/$1"
-    },
-    {
-      "source": "/((?!api|__clerk).*)",
+      "source": "/((?!api).*)",
       "destination": "/index.html"
     }
   ]
