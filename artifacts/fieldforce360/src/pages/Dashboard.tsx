@@ -1,12 +1,12 @@
 import { useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Users, ClipboardList, Activity, Zap, Bell, AlertTriangle, Info, RefreshCw, Plus, X, Loader2, DollarSign, Check, XCircle, Trash2 } from "lucide-react";
+import { Users, ClipboardList, Activity, Zap, Bell, AlertTriangle, Info, RefreshCw, Plus, X, Loader2, DollarSign, Check, XCircle, Trash2, MapPin, Navigation } from "lucide-react";
 import { useApi } from "../lib/api";
 import { cn } from "../lib/utils";
 
 interface Stats { serviceRequests: number; activeTechnicians: number; taskOverview: number; dispatchReadiness: number; }
 interface AlertItem { _id: string; message: string; timestamp: string; type: "info" | "warning" | "critical"; }
-interface Technician { _id: string; name: string; status: string; currentTask: string | null; location: string; email: string | null; phone: string | null; clerkUserId: string | null; lastLocationUpdate?: string | null; }
+interface Technician { _id: string; name: string; status: string; currentTask: string | null; location: string; email: string | null; phone: string | null; clerkUserId: string | null; lastLocationUpdate?: string | null; lat?: number; lng?: number; }
 interface Expense { _id: string; amount: number; category: string; description: string; status: string; loggedByUserId: string; createdAt: string; loggedByName?: string; }
 
 function formatDate(iso: string): string {
@@ -42,7 +42,18 @@ const ZONE_COORDS: Record<string, { lat: number; lng: number }> = {
   "Zone Bravo": { lat: 40.715, lng: -74.02 },
 };
 
-const emptyForm = { name: "", email: "", phone: "", location: "Depot HQ", status: "idle" as string };
+interface TechForm {
+  name: string;
+  email: string;
+  phone: string;
+  location: string;
+  status: string;
+  lat: number | null;
+  lng: number | null;
+  useGps: boolean;
+}
+
+const emptyForm: TechForm = { name: "", email: "", phone: "", location: "Depot HQ", status: "idle", lat: null, lng: null, useGps: false };
 
 const modalVariants = {
   hidden: { opacity: 0, y: 32, scale: 0.97 },
@@ -62,9 +73,11 @@ export default function Dashboard() {
   const [technicians, setTechnicians] = useState<Technician[]>([]);
   const [pendingExpenses, setPendingExpenses] = useState<Expense[]>([]);
   const [showAddTech, setShowAddTech] = useState(false);
-  const [techForm, setTechForm] = useState(emptyForm);
+  const [techForm, setTechForm] = useState<TechForm>(emptyForm);
   const [addingTech, setAddingTech] = useState(false);
   const [techError, setTechError] = useState<string | null>(null);
+  const [gpsLoading, setGpsLoading] = useState(false);
+  const [gpsError, setGpsError] = useState<string | null>(null);
   const [approvingExp, setApprovingExp] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -94,17 +107,81 @@ export default function Dashboard() {
     return () => clearInterval(t);
   }, [load]);
 
+  // Capture real-time GPS location
+  const getMyLocation = useCallback(() => {
+    setGpsLoading(true);
+    setGpsError(null);
+    if (!navigator.geolocation) {
+      setGpsError("Geolocation is not supported by this browser.");
+      setGpsLoading(false);
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        setTechForm((f) => ({ ...f, lat: latitude, lng: longitude, useGps: true, location: "Current Location" }));
+        setGpsLoading(false);
+        // Try reverse geocoding for a readable location name
+        try {
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=14&addressdetails=1`,
+            { headers: { "Accept-Language": "en" } }
+          );
+          const data = await res.json();
+          if (data && data.display_name) {
+            const addr = data.address || {};
+            const shortName = [addr.suburb, addr.city || addr.town || addr.village, addr.state]
+              .filter(Boolean)
+              .slice(0, 2)
+              .join(", ");
+            setTechForm((f) => ({ ...f, location: shortName || data.display_name.slice(0, 60) }));
+          }
+        } catch {
+          // If reverse geocoding fails, keep "Current Location" as the name
+        }
+      },
+      (err) => {
+        const messages: Record<number, string> = {
+          1: "Permission denied. Please allow location access in your browser.",
+          2: "Location unavailable. Check your GPS or network connection.",
+          3: "Location request timed out. Try again.",
+        };
+        setGpsError(messages[err.code] || "Failed to get location.");
+        setGpsLoading(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }
+    );
+  }, []);
+
   async function addTechnician() {
     if (!techForm.name.trim()) return;
     setAddingTech(true); setTechError(null);
     try {
-      const coords = ZONE_COORDS[techForm.location] ?? { lat: 40.7128 + (Math.random() - 0.5) * 0.05, lng: -74.006 + (Math.random() - 0.5) * 0.05 };
+      let lat: number;
+      let lng: number;
+      if (techForm.useGps && techForm.lat !== null && techForm.lng !== null) {
+        lat = techForm.lat;
+        lng = techForm.lng;
+      } else {
+        const coords = ZONE_COORDS[techForm.location] ?? { lat: 40.7128, lng: -74.006 };
+        lat = coords.lat;
+        lng = coords.lng;
+      }
       await fetchApi("/technicians", {
         method: "POST",
-        body: JSON.stringify({ name: techForm.name.trim(), email: techForm.email.trim() || null, phone: techForm.phone.trim() || null, location: techForm.location, status: techForm.status, lat: coords.lat, lng: coords.lng }),
+        body: JSON.stringify({
+          name: techForm.name.trim(),
+          email: techForm.email.trim() || null,
+          phone: techForm.phone.trim() || null,
+          location: techForm.location,
+          status: techForm.status,
+          lat,
+          lng,
+        }),
       });
       setShowAddTech(false);
       setTechForm(emptyForm);
+      setGpsError(null);
       await load();
     } catch (e: unknown) {
       setTechError(e instanceof Error ? e.message : "Failed to add technician");
@@ -116,7 +193,6 @@ export default function Dashboard() {
     try {
       await fetchApi(`/expenses/${id}`, { method: "PATCH", body: JSON.stringify({ status }) });
       setPendingExpenses((prev) => prev.filter((e) => e._id !== id));
-      // Reload alerts since approval/rejection now creates an alert
       const a = await fetchApi<AlertItem[]>("/alerts?limit=20");
       setAlerts(a);
     } catch { /* noop */ }
@@ -158,7 +234,6 @@ export default function Dashboard() {
         <div className="flex items-center justify-center py-20"><Loader2 className="w-8 h-8 text-cyan-400 animate-spin" /></div>
       ) : (
       <>
-      {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {statCards.map(({ label, value, icon: Icon, color, bg }, i) => (
           <motion.div key={label} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07 }}
@@ -173,7 +248,6 @@ export default function Dashboard() {
         ))}
       </div>
 
-      {/* Pending Expense Approvals */}
       {pendingExpenses.length > 0 && (
         <div className="glass p-5 border border-amber-500/20">
           <h2 className="text-white font-semibold mb-4 flex items-center gap-2">
@@ -192,11 +266,11 @@ export default function Dashboard() {
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <button onClick={() => approveExpense(e._id, "Approved")} disabled={approvingExp === e._id}
-                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs hover:bg-emerald-500/25 transition disabled:opacity-40">
-                    {approvingExp === e._id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />} Approve
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs hover:bg-emerald-500/25 transition disabled:opacity-40">
+                    <Check className="w-3 h-3" /> Approve
                   </button>
                   <button onClick={() => approveExpense(e._id, "Rejected")} disabled={approvingExp === e._id}
-                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-rose-500/15 border border-rose-500/30 text-rose-400 text-xs hover:bg-rose-500/25 transition disabled:opacity-40">
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-500/15 border border-rose-500/30 text-rose-400 text-xs hover:bg-rose-500/25 transition disabled:opacity-40">
                     <XCircle className="w-3 h-3" /> Reject
                   </button>
                 </div>
@@ -207,7 +281,6 @@ export default function Dashboard() {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Field Crew */}
         <div className="glass p-5">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-white font-semibold flex items-center gap-2"><Users className="w-4 h-4 text-cyan-400" /> Field Crew ({technicians.length})</h2>
@@ -234,6 +307,11 @@ export default function Dashboard() {
                       )}
                     </div>
                     <p className="text-slate-500 text-xs mt-0.5">{t.currentTask ?? t.location}</p>
+                    {t.lat !== undefined && t.lng !== undefined && (
+                      <p className="text-slate-600 text-xs mt-0.5 flex items-center gap-1">
+                        <MapPin className="w-3 h-3" /> {t.lat.toFixed(4)}, {t.lng.toFixed(4)}
+                      </p>
+                    )}
                     {(t.email || t.phone) && (
                       <p className="text-slate-600 text-xs mt-0.5">{[t.email, t.phone].filter(Boolean).join(" · ")}</p>
                     )}
@@ -248,7 +326,6 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Alert Feed */}
         <div className="glass p-5">
           <h2 className="text-white font-semibold mb-4 flex items-center gap-2">
             <Bell className="w-4 h-4 text-indigo-400" /> Alert Feed
@@ -278,7 +355,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Add Technician Modal */}
       <AnimatePresence>
         {showAddTech && (
           <>
@@ -288,7 +364,7 @@ export default function Dashboard() {
               initial="hidden" animate="visible" exit="exit"
               transition={{ duration: 0.2 }}
               className="fixed inset-0 z-50 bg-black/65 backdrop-blur-sm"
-              onClick={() => { setShowAddTech(false); setTechError(null); }}
+              onClick={() => { setShowAddTech(false); setTechError(null); setGpsError(null); }}
             />
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
               <motion.div
@@ -296,11 +372,11 @@ export default function Dashboard() {
                 variants={modalVariants}
                 initial="hidden" animate="visible" exit="exit"
                 transition={{ type: "spring", duration: 0.4, bounce: 0.25 }}
-                className="glass w-full max-w-sm p-6 pointer-events-auto"
+                className="glass w-full max-w-sm p-6 pointer-events-auto max-h-[90vh] overflow-y-auto"
               >
                 <div className="flex items-center justify-between mb-5">
                   <h2 className="text-white font-bold text-lg">Add Technician</h2>
-                  <button onClick={() => { setShowAddTech(false); setTechError(null); }} className="text-slate-400 hover:text-white">
+                  <button onClick={() => { setShowAddTech(false); setTechError(null); setGpsError(null); }} className="text-slate-400 hover:text-white">
                     <X className="w-5 h-5" />
                   </button>
                 </div>
@@ -326,14 +402,44 @@ export default function Dashboard() {
                       placeholder="e.g. +1 555-0123"
                       className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-cyan-500/50 placeholder:text-slate-600" />
                   </div>
+
                   <div>
-                    <label className="text-slate-400 text-xs mb-1.5 block">Zone / Location</label>
-                    <select value={techForm.location} onChange={(e) => setTechForm((f) => ({ ...f, location: e.target.value }))}
-                      className="w-full bg-[#0E1521] border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm focus:outline-none focus:border-cyan-500/50">
+                    <label className="text-slate-400 text-xs mb-1.5 block">Location</label>
+                    <button
+                      onClick={getMyLocation}
+                      disabled={gpsLoading}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-cyan-500/15 border border-cyan-500/30 text-cyan-400 text-sm hover:bg-cyan-500/25 transition disabled:opacity-40 mb-2"
+                    >
+                      {gpsLoading ? (
+                        <><Loader2 className="w-4 h-4 animate-spin" /> Getting location...</>
+                      ) : techForm.useGps ? (
+                        <><MapPin className="w-4 h-4 text-emerald-400" /> Location captured</>
+                      ) : (
+                        <><Navigation className="w-4 h-4" /> Use My Current Location</>
+                      )}
+                    </button>
+                    {techForm.useGps && techForm.lat !== null && techForm.lng !== null && (
+                      <div className="px-3 py-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 mb-2">
+                        <p className="text-emerald-400 text-xs flex items-center gap-1.5">
+                          <MapPin className="w-3 h-3" />
+                          GPS: {techForm.lat.toFixed(4)}, {techForm.lng.toFixed(4)}
+                        </p>
+                        <p className="text-slate-400 text-xs mt-0.5">{techForm.location}</p>
+                      </div>
+                    )}
+                    {gpsError && <p className="text-rose-400 text-xs mt-1 mb-2">{gpsError}</p>}
+                    <p className="text-slate-600 text-xs mb-1">Or select a zone manually:</p>
+                    <select
+                      value={techForm.useGps ? "" : techForm.location}
+                      onChange={(e) => setTechForm((f) => ({ ...f, location: e.target.value, useGps: false, lat: null, lng: null }))}
+                      className="w-full bg-[#0E1521] border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm focus:outline-none focus:border-cyan-500/50"
+                    >
+                      <option value="" disabled>— Select zone —</option>
                       {Object.keys(ZONE_COORDS).map((z) => <option key={z} value={z}>{z}</option>)}
                       <option value="Other">Other</option>
                     </select>
                   </div>
+
                   <div>
                     <label className="text-slate-400 text-xs mb-1.5 block">Initial Status</label>
                     <select value={techForm.status} onChange={(e) => setTechForm((f) => ({ ...f, status: e.target.value }))}
@@ -345,10 +451,10 @@ export default function Dashboard() {
                 </div>
                 {techError && <p className="text-rose-400 text-sm mt-3">{techError}</p>}
                 <div className="flex gap-3 mt-6">
-                  <button onClick={() => { setShowAddTech(false); setTechError(null); }} className="flex-1 py-2.5 rounded-xl border border-white/10 text-slate-400 text-sm hover:bg-white/5">
+                  <button onClick={() => { setShowAddTech(false); setTechError(null); setGpsError(null); }} className="flex-1 py-2.5 rounded-xl border border-white/10 text-slate-400 text-sm hover:bg-white/5">
                     Cancel
                   </button>
-                  <button onClick={addTechnician} disabled={addingTech || !techForm.name.trim()}
+                  <button onClick={addTechnician} disabled={addingTech || !techForm.name.trim() || (!techForm.useGps && !techForm.location)}
                     className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-600 text-white text-sm font-medium disabled:opacity-40 flex items-center justify-center gap-2">
                     {addingTech ? <Loader2 className="w-4 h-4 animate-spin" /> : "Add Technician"}
                   </button>
