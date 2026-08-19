@@ -264,6 +264,7 @@ function AppInner() {
   return (
     <ClerkProvider
       publishableKey={PUBLISHABLE_KEY}
+      proxyUrl="/__clerk"
       routerPush={(to) => wouterNavigate(to)}
       routerReplace={(to) => wouterNavigate(to, { replace: true })}
       navigate={wouterNavigate}
