@@ -113,7 +113,7 @@ export default function Requests() {
   const noTechsError = assignResult && !assignResult.ok && assignResult.msg.toLowerCase().includes("no idle");
 
   return (
-    <div className="p-6 space-y-6 max-w-7xl">
+    <div className="p-4 sm:p-6 space-y-6 max-w-7xl">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white flex items-center gap-2"><ClipboardList className="w-5 h-5 text-cyan-400" /> Service Requests</h1>
@@ -178,7 +178,7 @@ export default function Requests() {
 
       <div className="space-y-3">
         {filtered.length === 0 && (
-          <div className="glass p-12 text-center">
+          <div className="glass p-8 sm:p-12 text-center">
             <p className="text-slate-500 text-sm mb-2">{filter === "All" ? "No service requests yet." : `No ${filter.toLowerCase()} requests.`}</p>
             {filter === "All" && <p className="text-slate-600 text-xs">Click <span className="text-cyan-400">New Request</span> to create your first one.</p>}
           </div>

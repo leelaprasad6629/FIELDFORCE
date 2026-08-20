@@ -247,7 +247,7 @@ export default function MapPage() {
   }
 
   return (
-    <div className="p-6 space-y-6 max-w-7xl">
+    <div className="p-4 sm:p-6 space-y-6 max-w-7xl">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-white flex items-center gap-2"><MapIcon className="w-5 h-5 text-cyan-400" /> Live Fleet Map</h1>
@@ -280,7 +280,7 @@ export default function MapPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Real Leaflet Map */}
-        <div className="lg:col-span-2 glass p-0 overflow-hidden relative rounded-xl" style={{ height: "600px" }}>
+        <div className="lg:col-span-2 glass p-0 overflow-hidden relative rounded-xl h-[400px] sm:h-[500px] lg:h-[600px]">
           {loading && (
             <div className="absolute inset-0 z-[1000] flex items-center justify-center bg-[#0E1521]">
               <Loader2 className="w-8 h-8 text-cyan-400 animate-spin" />
@@ -312,7 +312,7 @@ export default function MapPage() {
         </div>
 
         {/* Field Crew Sidebar */}
-        <div className="glass p-5 max-h-[600px] overflow-y-auto">
+        <div className="glass p-4 sm:p-5 max-h-[400px] lg:max-h-[600px] overflow-y-auto">
           <h2 className="text-white font-semibold mb-4 flex items-center gap-2"><Users className="w-4 h-4 text-cyan-400" /> Field Crew</h2>
           {technicians.length === 0 && (
             <p className="text-slate-600 text-sm text-center py-4">No technicians found. Add technicians from the Dashboard.</p>

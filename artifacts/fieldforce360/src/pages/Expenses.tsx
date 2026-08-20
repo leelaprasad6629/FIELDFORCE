@@ -53,7 +53,7 @@ export default function Expenses() {
   const totalApproved = expenses.filter((e) => e.status === "Approved").reduce((s, e) => s + e.amount, 0);
 
   return (
-    <div className="p-6 space-y-6 max-w-4xl">
+    <div className="p-4 sm:p-6 space-y-6 max-w-4xl">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white flex items-center gap-2">
@@ -98,7 +98,7 @@ export default function Expenses() {
       {/* Expenses List */}
       <div className="space-y-3">
         {filtered.length === 0 && (
-          <div className="glass p-12 text-center">
+          <div className="glass p-8 sm:p-12 text-center">
             <p className="text-slate-500 text-sm">{filter === "All" ? "No expenses submitted yet." : `No ${filter.toLowerCase()} expenses.`}</p>
           </div>
         )}

@@ -48,7 +48,7 @@ export default function Onboarding() {
   return (
     <div className="min-h-screen flex items-center justify-center px-4" style={{ background: "#080C14" }}>
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-md">
-        <div className="glass p-8 text-center">
+        <div className="glass p-6 sm:p-8 text-center">
           <h1 className="text-2xl font-bold text-white mb-2">Choose Your Role</h1>
           <p className="text-slate-400 text-sm mb-8">This sets your dashboard view and permissions. You can't change it later.</p>
 

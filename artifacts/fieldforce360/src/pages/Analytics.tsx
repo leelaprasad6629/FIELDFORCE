@@ -59,7 +59,7 @@ export default function Analytics() {
   ];
 
   return (
-    <div className="p-6 space-y-6 max-w-7xl">
+    <div className="p-4 sm:p-6 space-y-6 max-w-7xl">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white flex items-center gap-2"><BarChart2 className="w-5 h-5 text-cyan-400" /> Predictive Analytics</h1>

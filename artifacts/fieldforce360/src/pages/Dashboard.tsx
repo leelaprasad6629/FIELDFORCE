@@ -235,7 +235,7 @@ export default function Dashboard() {
   ];
 
   return (
-    <div className="p-6 space-y-6 max-w-7xl">
+    <div className="p-4 sm:p-6 space-y-6 max-w-7xl">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-white">Operations Dashboard</h1>
@@ -393,7 +393,7 @@ export default function Dashboard() {
                 variants={modalVariants}
                 initial="hidden" animate="visible" exit="exit"
                 transition={{ type: "spring", duration: 0.4, bounce: 0.25 }}
-                className="glass w-full max-w-sm p-6 pointer-events-auto max-h-[90vh] overflow-y-auto"
+                className="glass w-full max-w-md p-5 sm:p-6 pointer-events-auto max-h-[90vh] overflow-y-auto"
               >
                 <div className="flex items-center justify-between mb-5">
                   <h2 className="text-white font-bold text-lg">Add Technician</h2>

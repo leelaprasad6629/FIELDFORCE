@@ -17,7 +17,7 @@ interface Props {
 export default function Landing({ onSignIn, onSignUp, authReady = true }: Props) {
   return (
     <div className="min-h-screen flex flex-col" style={{ background: "#080C14" }}>
-      <header className="relative overflow-hidden flex flex-col items-center justify-center py-28 px-4 text-center">
+      <header className="relative overflow-hidden flex flex-col items-center justify-center py-16 sm:py-28 px-4 text-center">
         <div className="absolute top-10 left-1/4 w-72 h-72 rounded-full opacity-20 blur-3xl" style={{ background: "#06B6D4", animation: "blob-one 8s ease-in-out infinite" }} />
         <div className="absolute bottom-10 right-1/4 w-80 h-80 rounded-full opacity-15 blur-3xl" style={{ background: "#6366F1", animation: "blob-two 12s ease-in-out infinite" }} />
 
@@ -26,10 +26,10 @@ export default function Landing({ onSignIn, onSignUp, authReady = true }: Props)
             <Zap className="w-3 h-3" />
             Field Service Management Platform
           </div>
-          <h1 className="text-5xl md:text-7xl font-extrabold text-white tracking-tight leading-tight mb-6">
+          <h1 className="text-4xl sm:text-5xl md:text-7xl font-extrabold text-white tracking-tight leading-tight mb-6">
             FieldForce<span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-indigo-400">360</span>
           </h1>
-          <p className="text-xl text-slate-400 max-w-xl mx-auto mb-10">
+          <p className="text-lg sm:text-xl text-slate-400 max-w-xl mx-auto mb-10">
             Dispatch, track, and analyze your field teams — with smart routing, real-time maps, and predictive insights.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
