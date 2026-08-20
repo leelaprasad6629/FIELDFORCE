@@ -102,6 +102,7 @@ export default function MapPage() {
   const markersRef = useRef<Record<string, L.Marker>>({});
   const containerRef = useRef<HTMLDivElement>(null);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
+  const hasFitBoundsRef = useRef(false);
 
   // Initialize the Leaflet map once
   useEffect(() => {
@@ -152,6 +153,7 @@ export default function MapPage() {
       }
       tileLayerRef.current = null;
       markersRef.current = {};
+      hasFitBoundsRef.current = false;
     };
   }, []);
 
@@ -169,6 +171,7 @@ export default function MapPage() {
     tileLayerRef.current.bringToBack();
   }, [tileMode]);
 
+  // Load technicians — NO dependency on lastUpdated to prevent re-render loop
   const load = useCallback(async () => {
     setRefreshing(true);
     try {
@@ -196,7 +199,8 @@ export default function MapPage() {
       }
 
       // Fit bounds to show all technicians (only on first load)
-      if (bounds.length > 0 && !lastUpdated) {
+      if (bounds.length > 0 && !hasFitBoundsRef.current) {
+        hasFitBoundsRef.current = true;
         if (bounds.length === 1) {
           mapRef.current.setView(bounds[0], 14);
         } else {
@@ -209,7 +213,7 @@ export default function MapPage() {
     } catch {
       /* noop */
     } finally { setRefreshing(false); }
-  }, [fetchApi, lastUpdated]);
+  }, [fetchApi]);
 
   useEffect(() => {
     load();
@@ -225,6 +229,7 @@ export default function MapPage() {
     }
   }, [selected]);
 
+  // Fit All button — recenter map to show all technicians
   function recenter() {
     if (!mapRef.current) return;
     const validTechs = technicians.filter((t) => typeof t.lat === "number" && typeof t.lng === "number");
@@ -238,6 +243,7 @@ export default function MapPage() {
       const bounds = validTechs.map((t): [number, number] => [t.lat, t.lng]);
       mapRef.current.fitBounds(L.latLngBounds(bounds), { padding: [60, 60], maxZoom: 15 });
     }
+    mapRef.current.invalidateSize();
   }
 
   return (
@@ -247,8 +253,7 @@ export default function MapPage() {
           <h1 className="text-2xl font-bold text-white flex items-center gap-2"><MapIcon className="w-5 h-5 text-cyan-400" /> Live Fleet Map</h1>
           <p className="text-slate-400 text-sm mt-1">Technician positions update every 15s{lastUpdated ? ` · updated ${lastUpdated.toLocaleTimeString()}` : ""}</p>
         </div>
-        <div className="flex items-center gap-2">
-          {/* Tile layer toggle */}
+        <div className="flex items-center gap-2 flex-wrap">
           <div className="flex items-center gap-1 px-1 py-1 rounded-lg border border-white/10 bg-white/5">
             <Layers className="w-3.5 h-3.5 text-slate-500 mx-1" />
             {(Object.keys(tileLayers) as TileMode[]).map((mode) => (
@@ -289,7 +294,7 @@ export default function MapPage() {
               </div>
             </div>
           )}
-          <div ref={containerRef} className="absolute inset-0" style={{ background: "#0E1521" }} />
+          <div ref={containerRef} className="absolute inset-0 z-0" style={{ background: "#0E1521", width: "100%", height: "100%" }} />
 
           {/* Legend overlay */}
           <div className="absolute bottom-4 right-4 z-[500] glass p-3 text-xs space-y-1.5 pointer-events-none">
