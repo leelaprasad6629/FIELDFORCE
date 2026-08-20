@@ -21,10 +21,13 @@ if (!process.env.CLERK_SECRET_KEY || process.env.CLERK_SECRET_KEY.startsWith("sk
 
 // ── MongoDB URI ──────────────────────────────────────────────────────
 // Fallback to the project's MongoDB Atlas cluster if MONGODB_URI is not
-// set as a Vercel env var. The same connection string is in .replit (git-tracked).
+// set as a Vercel env var. Uses the non-SRV connection format for broader
+// DNS compatibility. The same credentials are in the git-tracked .replit file.
 // For production, set MONGODB_URI as a Vercel env var and remove this fallback.
 const _mk = Buffer.from(
-  "bW9uZ29kYitzcnY6Ly9uYW5kZWxhbGVlbGFwcmFzYWRyZWRkeV9kYl91c2VyOkZpZWxkRm9yY2UyMDI0QGNsdXN0ZXIwLjUwajBlc3QubW9uZ29kYi5uZXQvZmllbGRmb3JjZTM2MD9yZXRyeVdyaXRlcz13Jm1ham9yaXR5",
+  "bW9uZ29kYjovL25hbmRlbGFsZWVsYXByYXNhZHJlZGR5X2RiX3VzZXI6RmllbGRGb3JjZTIwMjRA" +
+  "Y2x1c3RlcjAuNTBqMGVzdC5tb25nb2RiLm5ldDoyNzAxNy9maWVsZGZvcmNlMzYwP3NzbD10cnVl" +
+  "JnJldHJ5V3JpdGVzPXRydWUmdz1tYWpvcml0eQ==",
   "base64"
 ).toString();
 
