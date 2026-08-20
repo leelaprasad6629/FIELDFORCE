@@ -173,4 +173,38 @@ router.patch("/user/me/status", async (req: Request, res: Response) => {
   }
 });
 
+
+// Technician updates their own GPS location (without changing status)
+// Called automatically by watchPosition in the frontend
+router.patch("/user/me/location", async (req: Request, res: Response) => {
+  const auth = await requireApiUser(req, res);
+  if (!auth) return;
+  try {
+    await dbConnect();
+    const { lat, lng } = req.body;
+    if (typeof lat !== "number" || typeof lng !== "number") {
+      res.status(400).json({ error: "lat and lng must be numbers" });
+      return;
+    }
+    // Bounds check: valid latitude/longitude ranges
+    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+      res.status(400).json({ error: "Invalid coordinates" });
+      return;
+    }
+    const technician = await Technician.findOne({ clerkUserId: auth.userId });
+    if (!technician) {
+      res.status(404).json({ error: "Technician profile not found" });
+      return;
+    }
+    technician.lat = lat;
+    technician.lng = lng;
+    technician.lastLocationUpdate = new Date();
+    await technician.save();
+    res.json({ ok: true, lat: technician.lat, lng: technician.lng });
+  } catch (error) {
+    req.log.error({ error }, "PATCH /api/user/me/location error");
+    res.status(500).json({ error: "Failed to update location" });
+  }
+});
+
 export default router;
