@@ -154,7 +154,19 @@ export default function Dashboard() {
   }, []);
 
   async function addTechnician() {
-    if (!techForm.name.trim()) return;
+    // Client-side validation
+    if (!techForm.name.trim()) {
+      setTechError("Name is required");
+      return;
+    }
+    if (techForm.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(techForm.email.trim())) {
+      setTechError("Please enter a valid email address");
+      return;
+    }
+    if (techForm.phone && techForm.phone.trim().length < 7) {
+      setTechError("Please enter a valid phone number");
+      return;
+    }
     setAddingTech(true); setTechError(null);
     try {
       let lat: number;
@@ -184,7 +196,16 @@ export default function Dashboard() {
       setGpsError(null);
       await load();
     } catch (e: unknown) {
-      setTechError(e instanceof Error ? e.message : "Failed to add technician");
+      const msg = e instanceof Error ? e.message : "Failed to add technician";
+      if (msg.includes("Unauthorized")) {
+        setTechError("Authentication failed. Please sign out and sign back in, then try again.");
+      } else if (msg.includes("Forbidden")) {
+        setTechError("Only managers can add technicians. Make sure you are signed in as a manager.");
+      } else if (msg.includes("already exists")) {
+        setTechError(msg);
+      } else {
+        setTechError(msg);
+      }
     } finally { setAddingTech(false); }
   }
 
