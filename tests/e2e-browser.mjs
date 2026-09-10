@@ -1,16 +1,19 @@
+try { process.loadEnvFile?.(); } catch {}
+process.env.NODE_ENV = "production";
 import http from "node:http";
 import assert from "node:assert/strict";
 import { chromium } from "/Users/kalagotlashivareddy/.gemini/antigravity/scratch/Skill2intern/node_modules/playwright/index.mjs";
 import { createClerkClient } from "../artifacts/api-server/node_modules/@clerk/backend/dist/index.mjs";
 
-process.env.NODE_ENV = "production";
-process.env.MONGODB_URI = "mongodb://127.0.0.1:27017/fieldforce360";
-const CLERK_SECRET_KEY = "sk_test_G4PlBDPBBGFkkeTFF0lQ8zvpK0boTo2Kp29T0zxRb5";
-process.env.CLERK_SECRET_KEY = CLERK_SECRET_KEY;
+const CLERK_SECRET_KEY = process.env.CLERK_SECRET_KEY;
+if (!CLERK_SECRET_KEY) {
+  throw new Error("CLERK_SECRET_KEY environment variable is required to run e2e browser tests");
+}
 
 const clerk = createClerkClient({ secretKey: CLERK_SECRET_KEY });
 const MANAGER_USER_ID = "user_3FEHxPmUuMu3qfBAc080w3r7jRl";
 const TECH_USER_ID = "user_3J7k8XDBN6zYP7wkK1SKv9xOrv3";
+
 
 async function main() {
   console.log("================================================================================");

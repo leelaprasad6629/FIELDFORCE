@@ -1,10 +1,15 @@
+try { process.loadEnvFile?.(); } catch {}
 process.env.NODE_ENV = "production";
 import assert from "node:assert/strict";
 import http from "node:http";
 import { createClerkClient } from "../artifacts/api-server/node_modules/@clerk/backend/dist/index.mjs";
 
-const CLERK_SECRET_KEY = process.env.CLERK_SECRET_KEY || "sk_test_G4PlBDPBBGFkkeTFF0lQ8zvpK0boTo2Kp29T0zxRb5";
+const CLERK_SECRET_KEY = process.env.CLERK_SECRET_KEY;
+if (!CLERK_SECRET_KEY) {
+  throw new Error("CLERK_SECRET_KEY environment variable is required to run audit tests");
+}
 const clerk = createClerkClient({ secretKey: CLERK_SECRET_KEY });
+
 
 // Known test accounts in dominant-seal-48
 const MANAGER_USER_ID = "user_3FEHxPmUuMu3qfBAc080w3r7jRl";
@@ -360,7 +365,7 @@ async function runAll() {
   console.log("  FIELDFORCE360 FULL SYSTEM AUDIT & VERIFICATION TEST SUITE");
   console.log("================================================================================");
   
-  process.env.MONGODB_URI = "mongodb://127.0.0.1:27017/fieldforce360";
+  process.env.MONGODB_URI = process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/fieldforce360";
   process.env.CLERK_SECRET_KEY = CLERK_SECRET_KEY;
 
   console.log("[SETUP] Minting authenticated Clerk session JWTs...");

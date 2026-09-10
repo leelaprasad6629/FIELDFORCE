@@ -7,13 +7,14 @@ export function useApi() {
 
   async function fetchApi<T>(path: string, options: RequestInit = {}): Promise<T> {
     const token = await getToken();
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(options.headers as Record<string, string> | undefined),
+    };
     const res = await fetch(`${API_BASE}${path}`, {
       ...options,
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-        ...options.headers,
-      },
+      headers,
     });
     if (!res.ok) {
       const body = await res.json().catch(() => ({ error: res.statusText }));
@@ -24,3 +25,4 @@ export function useApi() {
 
   return { fetchApi };
 }
+

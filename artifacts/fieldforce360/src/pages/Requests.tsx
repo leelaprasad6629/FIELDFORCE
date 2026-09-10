@@ -42,6 +42,7 @@ type Filter = "All" | "Pending" | "Assigned" | "In-Progress" | "Completed" | "Ca
 export default function Requests() {
   const { fetchApi } = useApi();
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [initialLoad, setInitialLoad] = useState(true);
   const [requests, setRequests] = useState<ServiceRequest[]>([]);
@@ -55,8 +56,21 @@ export default function Requests() {
   const [deleting, setDeleting] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState<string | null>(null);
 
+
   const load = useCallback(async () => {
-    try { setRequests(await fetchApi<ServiceRequest[]>("/requests")); } catch { /* noop */ }
+    setRefreshing(true);
+    setLoadError(null);
+    try {
+      const data = await fetchApi<ServiceRequest[]>("/requests");
+      setRequests(data);
+      setLastUpdated(new Date());
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to load requests";
+      setLoadError(msg);
+    } finally {
+      setRefreshing(false);
+      setInitialLoad(false);
+    }
   }, [fetchApi]);
 
   useEffect(() => {
@@ -64,6 +78,7 @@ export default function Requests() {
     const t = setInterval(load, 20000);
     return () => clearInterval(t);
   }, [load]);
+
 
   async function assign(id: string) {
     setAssigning(id); setAssignResult(null);
@@ -133,6 +148,18 @@ export default function Requests() {
         <div className="flex items-center justify-center py-20"><Loader2 className="w-8 h-8 text-cyan-400 animate-spin" /></div>
       ) : (
       <>
+      {loadError && (
+        <div className="glass border-rose-500/30 bg-rose-500/10 px-4 py-3 text-rose-400 text-sm rounded-xl flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+            <span>{loadError}</span>
+          </div>
+          <button onClick={load} className="px-3 py-1 bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 rounded text-xs transition">
+            Retry
+          </button>
+        </div>
+      )}
+
       {/* Filter Tabs */}
       <div className="flex flex-wrap gap-2">
         {FILTERS.map((f) => {

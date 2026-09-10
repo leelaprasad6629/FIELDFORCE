@@ -9,26 +9,29 @@ if (!cache._mongooseCache) {
 }
 
 async function dbConnect() {
-  const MONGODB_URI = process.env.MONGODB_URI;
-  if (!MONGODB_URI) throw new Error("MONGODB_URI env var not set");
+  const rawUri = process.env.MONGODB_URI;
+  if (!rawUri) throw new Error("MONGODB_URI environment variable is not configured");
+  const MONGODB_URI = rawUri.trim().replace(/^["']|["']$/g, "");
+
   const c = cache._mongooseCache!;
-  if (c.conn) return c.conn;
-  if (!c.promise) {
+  if (c.conn && mongoose.connection.readyState === 1) return c.conn;
+
+  if (!c.promise || mongoose.connection.readyState === 0) {
     c.promise = mongoose.connect(MONGODB_URI, {
       serverSelectionTimeoutMS: 10000,
       bufferCommands: false,
     }).then((m) => m);
   }
+
   try {
     c.conn = await c.promise;
     return c.conn;
   } catch (err) {
-    // Clear the rejected promise so the next call can retry.
-    // Without this, a transient failure (e.g. cold start network blip)
-    // permanently breaks all subsequent DB calls on that warm instance.
     c.promise = null;
+    c.conn = null;
     throw err;
   }
 }
 
 export default dbConnect;
+
