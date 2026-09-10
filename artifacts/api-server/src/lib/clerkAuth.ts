@@ -31,14 +31,14 @@ export async function requireApiUser(
   res: Response
 ): Promise<{ userId: string; role: UserRole | undefined; email?: string | null } | null> {
   try {
-    const authHeader = req.headers.authorization;
+    const authHeader = req.get?.("authorization") || (req.headers.authorization as string | undefined) || ((req.headers as any).Authorization as string | undefined);
     if (!authHeader?.startsWith("Bearer ")) {
-      res.status(401).json({ error: "Unauthorized" });
+      res.status(401).json({ error: "Unauthorized", reason: "missing_or_invalid_authorization_header" });
       return null;
     }
     const token = authHeader.slice(7).trim();
     if (!token) {
-      res.status(401).json({ error: "Unauthorized" });
+      res.status(401).json({ error: "Unauthorized", reason: "empty_bearer_token" });
       return null;
     }
 
@@ -113,6 +113,7 @@ export async function requireApiUser(
     req.log?.error({ err, errorName: err?.name, errorMessage: err?.message }, "[clerkAuth] Token verification failed");
     res.status(401).json({
       error: "Unauthorized",
+      reason: "token_verification_failed",
       detail: err?.message || "Token verification failed",
     });
     return null;
