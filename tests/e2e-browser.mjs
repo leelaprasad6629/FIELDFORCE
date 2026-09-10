@@ -67,27 +67,42 @@ async function main() {
   console.log("  ✓ 'Get Started' button clicked successfully");
   await page.waitForTimeout(1000);
 
-  // Test 4: Manager Authenticated Flow via Ticket
-  console.log("TEST 4: Manager authentication via Clerk ticket URL");
+  // Test 4: Manager Authenticated Flow via Ticket Strategy
+  console.log("TEST 4: Manager authentication via Clerk ticket strategy");
   const managerContext = await browser.newContext({ viewport: { width: 1280, height: 800 } });
   const mgrPage = await managerContext.newPage();
   
-  await mgrPage.goto(managerTicket.url, { waitUntil: "networkidle" });
-  await mgrPage.waitForTimeout(3000);
-  console.log("  ✓ Ticket URL loaded:", mgrPage.url());
+  await mgrPage.goto(liveBase, { waitUntil: "domcontentloaded" });
+  await mgrPage.waitForFunction(() => !!window.Clerk && window.Clerk.loaded);
+  
+  const authRes = await mgrPage.evaluate(async (ticket) => {
+    const res = await window.Clerk.client.signIn.create({
+      strategy: "ticket",
+      ticket,
+    });
+    if (res.status === "complete") {
+      await window.Clerk.setActive({ session: res.createdSessionId });
+      return { ok: true, session: res.createdSessionId };
+    }
+    return { ok: false, status: res.status };
+  }, managerTicket.token);
+  
+  assert.equal(authRes.ok, true, "Manager ticket authentication must succeed");
+  console.log("  ✓ Manager session activated:", authRes.session);
 
   // Navigate to /dashboard
-  await mgrPage.goto(`${liveBase}/dashboard`, { waitUntil: "networkidle" });
+  await mgrPage.goto(`${liveBase}/dashboard`, { waitUntil: "domcontentloaded" });
   await mgrPage.waitForTimeout(2000);
   console.log("  ✓ Dashboard URL reached:", mgrPage.url());
 
   // Check if dashboard rendered
   const dashboardHeading = await mgrPage.locator("h1").first().textContent();
   console.log("  ✓ Dashboard heading:", dashboardHeading);
+  assert.equal(dashboardHeading, "Operations Dashboard");
 
   // Test 5: Predictive Analytics UI — Verify NO Fake Data
   console.log("TEST 5: Predictive Analytics — Verify 0% mock / no fake '87%' values");
-  await mgrPage.goto(`${liveBase}/analytics`, { waitUntil: "networkidle" });
+  await mgrPage.goto(`${liveBase}/analytics`, { waitUntil: "domcontentloaded" });
   await mgrPage.waitForTimeout(2000);
   const analyticsContent = await mgrPage.content();
   assert.ok(!analyticsContent.includes("Showing sample data — complete tasks"), "Sample data warning must not be present");
@@ -95,26 +110,58 @@ async function main() {
 
   // Test 6: Service Requests Page & Tabs
   console.log("TEST 6: Service Requests page & filter tabs");
-  await mgrPage.goto(`${liveBase}/requests`, { waitUntil: "networkidle" });
+  await mgrPage.goto(`${liveBase}/requests`, { waitUntil: "domcontentloaded" });
   await mgrPage.waitForTimeout(2000);
   
   // Verify tabs
-  const filterTabs = await mgrPage.locator("button:has-text('All'), button:has-text('Pending'), button:has-text('Cancelled')").allTextContents();
-  console.log("  ✓ Found filter tabs:", filterTabs.join(" | "));
+  const filterTabs = await mgrPage.locator("button").allTextContents();
+  const hasRequestTabs = filterTabs.some(t => t.includes("All") || t.includes("Pending") || t.includes("New Request"));
+  assert.ok(hasRequestTabs, "Service requests page must have filter tabs and actions");
+  console.log("  ✓ Service Requests tabs and actions verified");
 
   // Test 7: Live Fleet Map
   console.log("TEST 7: Live Fleet Map page");
-  await mgrPage.goto(`${liveBase}/map`, { waitUntil: "networkidle" });
+  await mgrPage.goto(`${liveBase}/map`, { waitUntil: "domcontentloaded" });
   await mgrPage.waitForTimeout(2000);
   const mapContainer = await mgrPage.locator(".leaflet-container").count();
   console.log("  ✓ Leaflet map container detected:", mapContainer > 0);
+  assert.ok(mapContainer > 0, "Leaflet map container must render on /map");
 
   // Test 8: Expenses Management
   console.log("TEST 8: Expense Management page");
-  await mgrPage.goto(`${liveBase}/expenses`, { waitUntil: "networkidle" });
+  await mgrPage.goto(`${liveBase}/expenses`, { waitUntil: "domcontentloaded" });
   await mgrPage.waitForTimeout(2000);
   const expensesHeading = await mgrPage.locator("h1").first().textContent();
   console.log("  ✓ Expenses heading:", expensesHeading);
+  assert.ok(expensesHeading.toLowerCase().includes("expense"), "Expenses page must render heading");
+
+  // Test 9: Technician Role Flow
+  console.log("TEST 9: Technician authentication and Task View");
+  const techContext = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  const techPage = await techContext.newPage();
+  await techPage.goto(liveBase, { waitUntil: "domcontentloaded" });
+  await techPage.waitForFunction(() => !!window.Clerk && window.Clerk.loaded);
+  
+  const techAuthRes = await techPage.evaluate(async (ticket) => {
+    const res = await window.Clerk.client.signIn.create({
+      strategy: "ticket",
+      ticket,
+    });
+    if (res.status === "complete") {
+      await window.Clerk.setActive({ session: res.createdSessionId });
+      return { ok: true, session: res.createdSessionId };
+    }
+    return { ok: false, status: res.status };
+  }, techTicket.token);
+  assert.equal(techAuthRes.ok, true, "Technician ticket authentication must succeed");
+  console.log("  ✓ Technician session activated:", techAuthRes.session);
+
+  await techPage.goto(`${liveBase}/technician`, { waitUntil: "domcontentloaded" });
+  await techPage.waitForTimeout(2000);
+  const techHeading = await techPage.locator("h1, h2").first().textContent();
+  console.log("  ✓ Technician page heading:", techHeading);
+  assert.ok(techHeading.length > 0);
+  await techContext.close();
 
   // Clean up
   await managerContext.close();
