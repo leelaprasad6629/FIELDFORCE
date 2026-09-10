@@ -37,7 +37,7 @@ const backdropVariants = {
   exit: { opacity: 0 },
 };
 
-type Filter = "All" | "Pending" | "Assigned" | "In-Progress" | "Completed";
+type Filter = "All" | "Pending" | "Assigned" | "In-Progress" | "Completed" | "Cancelled";
 
 export default function Requests() {
   const { fetchApi } = useApi();
@@ -108,7 +108,7 @@ export default function Requests() {
     finally { setCreating(false); }
   }
 
-  const FILTERS: Filter[] = ["All", "Pending", "Assigned", "In-Progress", "Completed"];
+  const FILTERS: Filter[] = ["All", "Pending", "Assigned", "In-Progress", "Completed", "Cancelled"];
   const filtered = filter === "All" ? requests : requests.filter((r) => r.status === filter);
   const noTechsError = assignResult && !assignResult.ok && assignResult.msg.toLowerCase().includes("no idle");
 

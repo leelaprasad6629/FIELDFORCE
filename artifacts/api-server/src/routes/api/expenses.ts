@@ -40,12 +40,17 @@ router.post("/expenses", async (req: Request, res: Response) => {
   try {
     await dbConnect();
     const { amount, category, description } = req.body;
-    if (!amount || isNaN(Number(amount))) { res.status(400).json({ error: "Valid amount is required" }); return; }
+    const numAmount = Number(amount);
+    if (isNaN(numAmount) || numAmount <= 0) {
+      res.status(400).json({ error: "Valid positive amount is required" });
+      return;
+    }
+    const trimmedDesc = typeof description === "string" ? description.trim() : "";
     const expense = await Expense.create({
       expenseId: `EXP-${Date.now()}`,
-      amount: Number(amount),
+      amount: Number(numAmount.toFixed(2)),
       category: category ?? "Miscellaneous",
-      description: description ?? "",
+      description: trimmedDesc,
       status: "Pending",
       loggedByUserId: auth.userId,
     });
@@ -64,7 +69,11 @@ router.patch("/expenses/:id", async (req: Request, res: Response) => {
     const expense = await Expense.findById(req.params.id);
     if (!expense) { res.status(404).json({ error: "Expense not found" }); return; }
     const { status } = req.body;
-    if (status) expense.status = status;
+    if (!status || !["Approved", "Rejected", "Pending"].includes(status)) {
+      res.status(400).json({ error: "Status must be Approved, Rejected, or Pending" });
+      return;
+    }
+    expense.status = status;
     await expense.save();
     if (status === "Approved" || status === "Rejected") {
       await Alert.create({ message: `Expense ${expense.expenseId} ($${expense.amount.toFixed(2)}) ${status.toLowerCase()} by manager`, timestamp: new Date(), type: status === "Approved" ? "info" : "warning" });

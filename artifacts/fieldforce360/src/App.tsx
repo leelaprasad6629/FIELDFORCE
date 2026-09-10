@@ -266,7 +266,6 @@ function AppInner() {
       publishableKey={PUBLISHABLE_KEY}
       routerPush={(to) => wouterNavigate(to)}
       routerReplace={(to) => wouterNavigate(to, { replace: true })}
-      navigate={wouterNavigate}
       afterSignOutUrl="/"
     >
       <QueryClientProvider client={queryClient}>

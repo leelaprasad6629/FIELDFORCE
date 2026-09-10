@@ -10,7 +10,7 @@
 // To use a live instance: set BOTH VITE_CLERK_PUBLISHABLE_KEY and
 // CLERK_SECRET_KEY as Vercel env vars, and remove this override.
 const _ck = Buffer.from(
-  "c2tfdGVzdF9pazRZSWRlUUo5anZsS3lIODJLMDhiSjA1bFJUendHbDBHTklsRlcwY1E=",
+  "c2tfdGVzdF9HNFBsQkRQQkJHRmtrZVRGRjBsUTh6dnBLMGJvVG8yS3AyOVQwenhSYjU=",
   "base64"
 ).toString();
 

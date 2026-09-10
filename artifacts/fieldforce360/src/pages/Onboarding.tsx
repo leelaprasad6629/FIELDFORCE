@@ -21,7 +21,7 @@ export default function Onboarding() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { fetchApi } = useApi();
-  const { reload } = useUser();
+  const { user } = useUser();
   const [, navigate] = useLocation();
 
   async function handleConfirm() {
@@ -30,12 +30,12 @@ export default function Onboarding() {
     setError(null);
     try {
       await fetchApi("/user/role", { method: "POST", body: JSON.stringify({ role: selected }) });
-      await reload();
+      await user?.reload();
       navigate(selected === "manager" ? "/dashboard" : "/technician");
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Failed to set role";
       if (msg.includes("already set")) {
-        await reload();
+        await user?.reload();
         navigate(selected === "manager" ? "/dashboard" : "/technician");
       } else {
         setError(msg + ". Please try again.");

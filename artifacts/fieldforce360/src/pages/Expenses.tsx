@@ -11,6 +11,7 @@ interface Expense {
   description: string;
   status: string;
   loggedByUserId: string;
+  loggedByName?: string;
   createdAt: string;
 }
 
@@ -43,8 +44,11 @@ export default function Expenses() {
     try {
       await fetchApi(`/expenses/${id}`, { method: "PATCH", body: JSON.stringify({ status }) });
       setExpenses((prev) => prev.map((e) => e._id === id ? { ...e, status } : e));
-    } catch { /* noop */ }
-    finally { setApproving(null); }
+    } catch (err) {
+      alert(err instanceof Error ? err.message : `Failed to ${status.toLowerCase()} expense`);
+    } finally {
+      setApproving(null);
+    }
   }
 
   const FILTERS = ["All", "Pending", "Approved", "Rejected"] as const;
@@ -110,12 +114,17 @@ export default function Expenses() {
                 <p className="text-white font-semibold">${e.amount.toFixed(2)}</p>
                 <span className="text-slate-400 text-sm">·</span>
                 <p className="text-slate-300 text-sm">{e.category}</p>
+                {e.loggedByName && (
+                  <span className="text-xs px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-slate-300">
+                    By: {e.loggedByName}
+                  </span>
+                )}
                 <span className={cn("text-xs px-2 py-0.5 rounded-full border", statusColors[e.status] ?? statusColors.Pending)}>
                   {e.status}
                 </span>
               </div>
-              {e.description && <p className="text-slate-500 text-sm">{e.description}</p>}
-              <p className="text-slate-600 text-xs mt-1">
+              {e.description && <p className="text-slate-400 text-sm">{e.description}</p>}
+              <p className="text-slate-500 text-xs mt-1">
                 Submitted {new Date(e.createdAt).toLocaleString()}
               </p>
             </div>

@@ -45,7 +45,7 @@ router.get("/requests", async (req: Request, res: Response) => {
   try {
     await dbConnect();
     const requests = await ServiceRequest.find({}).sort({ createdAt: -1 }).lean();
-    res.json(requests.map((d) => serializeRequest(d as Record<string, unknown>)));
+    res.json(requests.map((d) => serializeRequest(d as unknown as Record<string, unknown>)));
   } catch (error) {
     req.log.error({ error }, "GET /api/requests error");
     res.status(500).json({ error: "Failed to fetch requests" });
@@ -70,7 +70,7 @@ router.post("/requests", async (req: Request, res: Response) => {
       eta: eta ? new Date(eta) : new Date(Date.now() + 2 * 60 * 60 * 1000),
     });
     await Alert.create({ message: `New service request created: ${title} (${category})`, timestamp: new Date(), type: "info" });
-    res.status(201).json(serializeRequest(request.toObject() as Record<string, unknown>));
+    res.status(201).json(serializeRequest(request.toObject() as unknown as Record<string, unknown>));
   } catch (error) {
     req.log.error({ error }, "POST /api/requests error");
     res.status(500).json({ error: "Failed to create request" });
@@ -102,7 +102,7 @@ router.patch("/requests/:id", async (req: Request, res: Response) => {
     if (priority) serviceRequest.priority = priority;
     if (description) serviceRequest.description = description;
     await serviceRequest.save();
-    res.json(serializeRequest(serviceRequest.toObject() as Record<string, unknown>));
+    res.json(serializeRequest(serviceRequest.toObject() as unknown as Record<string, unknown>));
   } catch (error) {
     req.log.error({ error }, "PATCH /api/requests/:id error");
     res.status(500).json({ error: "Failed to update request" });
@@ -157,9 +157,9 @@ router.post("/requests/:id/assign", async (req: Request, res: Response) => {
     const task = await Task.create({
       taskId: `TSK-${Date.now()}`, title: serviceRequest.title, category: serviceRequest.category,
       assignedTo: technician.name, assignedTechnicianId: String(technician._id),
-      serviceRequestId: String(serviceRequest._id), customerName: serviceRequest.customerName, status: "in-progress",
+      serviceRequestId: String(serviceRequest._id), customerName: serviceRequest.customerName, status: "in-progress" as const,
       zone: serviceRequest.location, location: serviceRequest.location,
-      priority: serviceRequest.priority.toLowerCase(), eta,
+      priority: (serviceRequest.priority.toLowerCase() as "low" | "medium" | "high" | "critical"), eta,
       checklist: DEFAULT_CHECKLIST.map((label) => ({ label, done: false })),
     });
     await Alert.create({ message: `Smart dispatch assigned ${technician.name} to "${serviceRequest.title}" (${serviceRequest.requestId})`, timestamp: new Date(), type: "info" });
@@ -181,9 +181,9 @@ router.post("/requests/:id/assign", async (req: Request, res: Response) => {
     }
 
     res.json({
-      request: serializeRequest(serviceRequest.toObject() as Record<string, unknown>),
+      request: serializeRequest(serviceRequest.toObject() as unknown as Record<string, unknown>),
       technician: { _id: String(technician._id), name: technician.name, distanceKm: Number(match.distance.toFixed(1)), score: Math.max(85, Math.round(100 - match.distance * 2)) },
-      taskId: task.taskId,
+      taskId: (task as any).taskId,
       notification: notifResult,
     });
   } catch (error) {

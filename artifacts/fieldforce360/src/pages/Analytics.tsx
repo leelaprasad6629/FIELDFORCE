@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { motion } from "framer-motion";
-import { BarChart2, TrendingUp, Clock, Zap, RefreshCw, DollarSign, Loader2 } from "lucide-react";
+import { BarChart2, TrendingUp, Clock, Zap, RefreshCw, DollarSign, Loader2, Info } from "lucide-react";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, LineChart, Line, CartesianGrid } from "recharts";
 import { useApi } from "../lib/api";
 import { cn } from "../lib/utils";
@@ -12,16 +12,6 @@ interface AnalyticsData {
   delays: Array<{ day: string; delay: number | null }>;
   expenses?: { pendingCount: number; pendingAmount: number; approvedCount: number; approvedAmount: number; totalCount: number };
 }
-
-const MOCK_VELOCITY = [
-  { day: "Mon", tasks: 5 }, { day: "Tue", tasks: 8 }, { day: "Wed", tasks: 6 },
-  { day: "Thu", tasks: 11 }, { day: "Fri", tasks: 9 }, { day: "Sat", tasks: 3 }, { day: "Sun", tasks: 2 },
-];
-
-const MOCK_DELAYS = [
-  { day: "Mon", delay: 0.5 }, { day: "Tue", delay: 1.2 }, { day: "Wed", delay: 0.3 },
-  { day: "Thu", delay: 2.1 }, { day: "Fri", delay: 0.8 }, { day: "Sat", delay: 0.0 }, { day: "Sun", delay: null },
-];
 
 const tooltipStyle = { backgroundColor: "#0E1521", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, color: "#f1f5f9" };
 
@@ -39,7 +29,7 @@ export default function Analytics() {
       setLastUpdated(new Date());
     } catch { /* noop */ }
     finally { setRefreshing(false); setInitialLoad(false); }
-  }, []);
+  }, [fetchApi]);
 
   useEffect(() => {
     load();
@@ -47,15 +37,15 @@ export default function Analytics() {
     return () => clearInterval(t);
   }, [load]);
 
-  const velocity = (data?.hasEnoughData && data.velocity.length > 0) ? data.velocity : MOCK_VELOCITY;
-  const delays = (data?.hasEnoughData && data.delays.length > 0) ? data.delays : MOCK_DELAYS;
-  const isMock = !data?.hasEnoughData;
+  const velocity = data?.velocity ?? [];
+  const delays = (data?.delays ?? []).filter((d) => d.delay !== null);
+  const hasTaskHistory = velocity.some((v) => v.tasks > 0);
 
   const kpis = [
-    { label: "Predicted CSAT", value: data?.predictedCsat ? `${data.predictedCsat}%` : isMock ? "87%" : "—", icon: TrendingUp, color: "text-emerald-400", bg: "bg-emerald-500/10" },
-    { label: "1st-Time Fix Rate", value: data?.firstTimeFixRate ? `${data.firstTimeFixRate}%` : isMock ? "74%" : "—", icon: Zap, color: "text-cyan-400", bg: "bg-cyan-500/10" },
-    { label: "Avg Response", value: data?.avgResponseMinutes ? `${data.avgResponseMinutes}m` : isMock ? "38m" : "—", icon: Clock, color: "text-indigo-400", bg: "bg-indigo-500/10" },
-    { label: "Fleet Utilization", value: data?.fleetUtilization ? `${data.fleetUtilization}%` : isMock ? "65%" : "—", icon: BarChart2, color: "text-amber-400", bg: "bg-amber-500/10" },
+    { label: "Predicted CSAT", value: data?.predictedCsat !== null && data?.predictedCsat !== undefined ? `${data.predictedCsat}%` : "—", icon: TrendingUp, color: "text-emerald-400", bg: "bg-emerald-500/10" },
+    { label: "1st-Time Fix Rate", value: data?.firstTimeFixRate !== null && data?.firstTimeFixRate !== undefined ? `${data.firstTimeFixRate}%` : "—", icon: Zap, color: "text-cyan-400", bg: "bg-cyan-500/10" },
+    { label: "Avg Response", value: data?.avgResponseMinutes !== null && data?.avgResponseMinutes !== undefined ? `${data.avgResponseMinutes}m` : "—", icon: Clock, color: "text-indigo-400", bg: "bg-indigo-500/10" },
+    { label: "Fleet Utilization", value: data?.fleetUtilization !== null && data?.fleetUtilization !== undefined ? `${data.fleetUtilization}%` : "—", icon: BarChart2, color: "text-amber-400", bg: "bg-amber-500/10" },
   ];
 
   return (
@@ -74,9 +64,10 @@ export default function Analytics() {
         <div className="flex items-center justify-center py-20"><Loader2 className="w-8 h-8 text-cyan-400 animate-spin" /></div>
       ) : (
       <>
-      {isMock && (
-        <div className="glass border-amber-500/30 bg-amber-500/8 px-4 py-3 text-amber-400/80 text-sm rounded-xl">
-          Showing sample data — complete tasks to see real metrics.
+      {!data?.hasEnoughData && (
+        <div className="glass border-cyan-500/20 bg-cyan-500/5 px-4 py-3 text-slate-300 text-sm rounded-xl flex items-center gap-2">
+          <Info className="w-4 h-4 text-cyan-400 flex-shrink-0" />
+          Collecting live operational data — complete tasks and service requests to generate AI-predicted performance trends.
         </div>
       )}
 
@@ -96,12 +87,15 @@ export default function Analytics() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="glass p-5">
-          <h2 className="text-white font-semibold mb-4">Task Velocity (7 days)</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-white font-semibold">Task Velocity (7 days)</h2>
+            {!hasTaskHistory && <span className="text-xs text-slate-500">0 completed</span>}
+          </div>
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={velocity} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
               <XAxis dataKey="day" tick={{ fill: "#64748b", fontSize: 12 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: "#64748b", fontSize: 12 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: "#64748b", fontSize: 12 }} axisLine={false} tickLine={false} allowDecimals={false} />
               <Tooltip contentStyle={tooltipStyle} cursor={{ fill: "rgba(6,182,212,0.06)" }} />
               <Bar dataKey="tasks" fill="url(#barGrad)" radius={[4, 4, 0, 0]} />
               <defs>
@@ -116,15 +110,23 @@ export default function Analytics() {
 
         <div className="glass p-5">
           <h2 className="text-white font-semibold mb-4">Avg Delay (hours)</h2>
-          <ResponsiveContainer width="100%" height={220}>
-            <LineChart data={delays.filter((d) => d.delay !== null)} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-              <XAxis dataKey="day" tick={{ fill: "#64748b", fontSize: 12 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: "#64748b", fontSize: 12 }} axisLine={false} tickLine={false} />
-              <Tooltip contentStyle={tooltipStyle} />
-              <Line type="monotone" dataKey="delay" stroke="#F59E0B" strokeWidth={2} dot={{ fill: "#F59E0B", strokeWidth: 0, r: 4 }} />
-            </LineChart>
-          </ResponsiveContainer>
+          {delays.length > 0 ? (
+            <ResponsiveContainer width="100%" height={220}>
+              <LineChart data={delays} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                <XAxis dataKey="day" tick={{ fill: "#64748b", fontSize: 12 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: "#64748b", fontSize: 12 }} axisLine={false} tickLine={false} />
+                <Tooltip contentStyle={tooltipStyle} />
+                <Line type="monotone" dataKey="delay" stroke="#F59E0B" strokeWidth={2} dot={{ fill: "#F59E0B", strokeWidth: 0, r: 4 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-[220px] flex flex-col items-center justify-center text-slate-500 text-sm">
+              <Clock className="w-8 h-8 text-slate-600 mb-2" />
+              <p>No completion delay data yet</p>
+              <p className="text-xs text-slate-600 mt-1">Delays are calculated when scheduled tasks are closed</p>
+            </div>
+          )}
         </div>
       </div>
 

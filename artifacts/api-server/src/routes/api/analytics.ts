@@ -113,8 +113,8 @@ router.get("/analytics", async (req: Request, res: Response) => {
       firstTimeFixRate,
       fleetUtilization,
       dailyThroughput: thisWeek,
-      velocity: velocity.some((v) => v.tasks > 0) ? velocity : [],
-      delays: delays.some((d) => d.delay !== null) ? delays : [],
+      velocity,
+      delays,
       expenses: {
         pendingCount: pendingExpenses.length,
         pendingAmount: Number(totalPendingAmount.toFixed(2)),

@@ -44,7 +44,7 @@ router.get("/tasks", async (req: Request, res: Response) => {
       filter = { assignedTechnicianId: String(technician._id), status: { $nin: ["completed", "cancelled"] } };
     }
     const tasks = await Task.find(filter).sort({ createdAt: -1 }).lean();
-    res.json(tasks.map((d) => serializeTask(d as Record<string, unknown>)));
+    res.json(tasks.map((d) => serializeTask(d as unknown as Record<string, unknown>)));
   } catch (error) {
     req.log.error({ error }, "GET /api/tasks error");
     res.status(500).json({ error: "Failed to fetch tasks" });
@@ -65,7 +65,7 @@ router.post("/tasks", async (req: Request, res: Response) => {
       zone, location, priority: priority ?? "medium",
       eta: eta ? new Date(eta) : null, checklist: checklist ?? [],
     });
-    res.status(201).json(serializeTask(task.toObject() as Record<string, unknown>));
+    res.status(201).json(serializeTask(task.toObject() as unknown as Record<string, unknown>));
   } catch (error) {
     req.log.error({ error }, "POST /api/tasks error");
     res.status(500).json({ error: "Failed to create task" });
@@ -102,7 +102,7 @@ router.patch("/tasks/:id", async (req: Request, res: Response) => {
       await Alert.create({ message: `Task "${task.title}" completed by ${task.assignedTo ?? "technician"}`, timestamp: new Date(), type: "info" });
     }
     await task.save();
-    res.json(serializeTask(task.toObject() as Record<string, unknown>));
+    res.json(serializeTask(task.toObject() as unknown as Record<string, unknown>));
   } catch (error) {
     req.log.error({ error }, "PATCH /api/tasks/:id error");
     res.status(500).json({ error: "Failed to update task" });

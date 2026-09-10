@@ -1,6 +1,6 @@
 import mongoose, { Document, Model, Schema } from "mongoose";
 
-export type ServiceRequestStatus = "Pending" | "Assigned" | "In-Progress" | "Completed";
+export type ServiceRequestStatus = "Pending" | "Assigned" | "In-Progress" | "Completed" | "Cancelled";
 
 export interface IServiceRequest extends Document {
   requestId: string;

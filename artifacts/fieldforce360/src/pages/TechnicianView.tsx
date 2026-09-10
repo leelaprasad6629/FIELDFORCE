@@ -43,6 +43,7 @@ export default function TechnicianView() {
   const [completing, setCompleting] = useState<string | null>(null);
   const [showExpForm, setShowExpForm] = useState(false);
   const [expForm, setExpForm] = useState({ amount: "", category: "Fuel", description: "" });
+  const [expError, setExpError] = useState<string | null>(null);
   const [savingExp, setSavingExp] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
@@ -137,7 +138,9 @@ export default function TechnicianView() {
     try {
       const updated = await fetchApi<Task>(`/tasks/${task._id}`, { method: "PATCH", body: JSON.stringify({ checklist }) });
       setTasks((prev) => prev.map((t) => t._id === task._id ? updated : t));
-    } catch { /* noop */ }
+    } catch (err) {
+      console.error("Failed to update checklist:", err);
+    }
   }
 
   async function completeTask(task: Task) {
@@ -145,8 +148,11 @@ export default function TechnicianView() {
     try {
       await fetchApi(`/tasks/${task._id}`, { method: "PATCH", body: JSON.stringify({ action: "complete" }) });
       await load();
-    } catch { /* noop */ }
-    finally { setCompleting(null); }
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to complete task");
+    } finally {
+      setCompleting(null);
+    }
   }
 
   async function updateStatus(status: string) {
@@ -154,7 +160,6 @@ export default function TechnicianView() {
     try {
       let lat: number | undefined;
       let lng: number | undefined;
-      // Try to get fresh GPS reading
       if (navigator.geolocation) {
         try {
           const pos = await new Promise<GeolocationPosition>((res, rej) =>
@@ -163,8 +168,7 @@ export default function TechnicianView() {
           lat = pos.coords.latitude;
           lng = pos.coords.longitude;
           setCurrentCoords({ lat, lng });
-        } catch (err) {
-          // Use cached coords if available
+        } catch {
           if (currentCoords) {
             lat = currentCoords.lat;
             lng = currentCoords.lng;
@@ -173,8 +177,11 @@ export default function TechnicianView() {
       }
       await fetchApi("/user/me/status", { method: "PATCH", body: JSON.stringify({ status, lat, lng }) });
       await load();
-    } catch { /* noop */ }
-    finally { setUpdatingStatus(false); }
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to update status");
+    } finally {
+      setUpdatingStatus(false);
+    }
   }
 
   async function shareLocation() {
@@ -215,15 +222,31 @@ export default function TechnicianView() {
   }
 
   async function logExpense() {
+    const numAmount = Number(expForm.amount);
+    if (isNaN(numAmount) || numAmount <= 0) {
+      setExpError("Please enter a valid positive dollar amount.");
+      return;
+    }
     setSavingExp(true);
+    setExpError(null);
     try {
-      await fetchApi("/expenses", { method: "POST", body: JSON.stringify({ amount: Number(expForm.amount), category: expForm.category, description: expForm.description }) });
+      await fetchApi("/expenses", {
+        method: "POST",
+        body: JSON.stringify({
+          amount: numAmount,
+          category: expForm.category,
+          description: expForm.description.trim(),
+        }),
+      });
       setShowExpForm(false);
       setExpForm({ amount: "", category: "Fuel", description: "" });
       const e = await fetchApi<Expense[]>("/expenses");
       setExpenses(e);
-    } catch { /* noop */ }
-    finally { setSavingExp(false); }
+    } catch (err) {
+      setExpError(err instanceof Error ? err.message : "Failed to submit expense");
+    } finally {
+      setSavingExp(false);
+    }
   }
 
   const currentStatus = profile?.status ?? "idle";
@@ -407,10 +430,16 @@ export default function TechnicianView() {
               >
                 <div className="flex items-center justify-between mb-5">
                   <h2 className="text-white font-bold text-lg">Log Expense</h2>
-                  <button onClick={() => setShowExpForm(false)} className="text-slate-400 hover:text-white">
+                  <button onClick={() => { setShowExpForm(false); setExpError(null); }} className="text-slate-400 hover:text-white">
                     <X className="w-5 h-5" />
                   </button>
                 </div>
+                {expError && (
+                  <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs flex items-center gap-2 mb-4">
+                    <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                    <span>{expError}</span>
+                  </div>
+                )}
                 <div className="space-y-4">
                   <div>
                     <label className="text-slate-400 text-xs mb-1.5 block">Amount ($) *</label>

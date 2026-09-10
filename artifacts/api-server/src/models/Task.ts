@@ -1,6 +1,6 @@
 import mongoose, { Document, Model, Schema } from "mongoose";
 
-export type TaskStatus = "pending" | "in-progress" | "completed";
+export type TaskStatus = "pending" | "in-progress" | "completed" | "cancelled";
 export type TaskPriority = "low" | "medium" | "high" | "critical";
 
 export interface ChecklistItem {

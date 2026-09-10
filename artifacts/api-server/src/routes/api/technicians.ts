@@ -28,7 +28,7 @@ router.get("/technicians", async (req: Request, res: Response) => {
   try {
     await dbConnect();
     const technicians = await Technician.find({}).sort({ name: 1 }).lean();
-    res.json(technicians.map((d) => serialize(d as Record<string, unknown>)));
+    res.json(technicians.map((d) => serialize(d as unknown as Record<string, unknown>)));
   } catch (error) {
     req.log.error({ error }, "GET /api/technicians error");
     res.status(500).json({ error: "Failed to fetch technicians" });
@@ -65,7 +65,7 @@ router.post("/technicians", async (req: Request, res: Response) => {
       email: email ?? null,
       phone: phone ?? null,
     });
-    res.status(201).json(serialize(technician.toObject() as Record<string, unknown>));
+    res.status(201).json(serialize(technician.toObject() as unknown as Record<string, unknown>));
   } catch (error) {
     req.log.error({ error }, "POST /api/technicians error");
     res.status(500).json({ error: "Failed to create technician" });
@@ -97,7 +97,7 @@ router.patch("/technicians/:id", async (req: Request, res: Response) => {
       if (phone !== undefined) technician.phone = phone;
     }
     await technician.save();
-    res.json(serialize(technician.toObject() as Record<string, unknown>));
+    res.json(serialize(technician.toObject() as unknown as Record<string, unknown>));
   } catch (error) {
     req.log.error({ error }, "PATCH /api/technicians/:id error");
     res.status(500).json({ error: "Failed to update technician" });
