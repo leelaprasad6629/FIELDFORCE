@@ -2,6 +2,7 @@ import { Router } from "express";
 import type { Request, Response } from "express";
 import dbConnect from "../../models/mongodb.js";
 import { requireApiUser, requireManagerApi } from "../../lib/clerkAuth.js";
+import { handleApiError } from "../../lib/errorHandler.js";
 import { Task } from "../../models/Task.js";
 import { Technician } from "../../models/Technician.js";
 import { ServiceRequest } from "../../models/ServiceRequest.js";
@@ -19,7 +20,7 @@ function serializeTask(doc: Record<string, unknown>) {
     assignedTo: doc.assignedTo ?? null,
     assignedTechnicianId: doc.assignedTechnicianId ?? null,
     serviceRequestId: doc.serviceRequestId ?? null,
-  customerName: doc.customerName ?? null,
+    customerName: doc.customerName ?? null,
     status: doc.status,
     zone: doc.zone,
     location: doc.location,
@@ -46,8 +47,7 @@ router.get("/tasks", async (req: Request, res: Response) => {
     const tasks = await Task.find(filter).sort({ createdAt: -1 }).lean();
     res.json(tasks.map((d) => serializeTask(d as unknown as Record<string, unknown>)));
   } catch (error) {
-    req.log.error({ error }, "GET /api/tasks error");
-    res.status(500).json({ error: "Failed to fetch tasks" });
+    handleApiError(req, res, error, "Failed to fetch tasks");
   }
 });
 
@@ -67,8 +67,7 @@ router.post("/tasks", async (req: Request, res: Response) => {
     });
     res.status(201).json(serializeTask(task.toObject() as unknown as Record<string, unknown>));
   } catch (error) {
-    req.log.error({ error }, "POST /api/tasks error");
-    res.status(500).json({ error: "Failed to create task" });
+    handleApiError(req, res, error, "Failed to create task");
   }
 });
 
@@ -104,8 +103,7 @@ router.patch("/tasks/:id", async (req: Request, res: Response) => {
     await task.save();
     res.json(serializeTask(task.toObject() as unknown as Record<string, unknown>));
   } catch (error) {
-    req.log.error({ error }, "PATCH /api/tasks/:id error");
-    res.status(500).json({ error: "Failed to update task" });
+    handleApiError(req, res, error, "Failed to update task");
   }
 });
 

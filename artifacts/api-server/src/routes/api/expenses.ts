@@ -2,6 +2,7 @@ import { Router } from "express";
 import type { Request, Response } from "express";
 import { requireApiUser, requireManagerApi } from "../../lib/clerkAuth.js";
 import dbConnect from "../../models/mongodb.js";
+import { handleApiError } from "../../lib/errorHandler.js";
 import { Expense } from "../../models/Expense.js";
 import { Technician } from "../../models/Technician.js";
 import { Alert } from "../../models/Alert.js";
@@ -29,8 +30,7 @@ router.get("/expenses", async (req: Request, res: Response) => {
     }
     res.json(expenses.map((e) => ({ ...e, _id: String(e._id) })));
   } catch (error) {
-    req.log.error({ error }, "GET /api/expenses error");
-    res.status(500).json({ error: "Failed to fetch expenses" });
+    handleApiError(req, res, error, "Failed to fetch expenses");
   }
 });
 
@@ -56,8 +56,7 @@ router.post("/expenses", async (req: Request, res: Response) => {
     });
     res.status(201).json({ ...expense.toObject(), _id: String(expense._id) });
   } catch (error) {
-    req.log.error({ error }, "POST /api/expenses error");
-    res.status(500).json({ error: "Failed to create expense" });
+    handleApiError(req, res, error, "Failed to create expense");
   }
 });
 
@@ -80,8 +79,7 @@ router.patch("/expenses/:id", async (req: Request, res: Response) => {
     }
     res.json({ ...expense.toObject(), _id: String(expense._id) });
   } catch (error) {
-    req.log.error({ error }, "PATCH /api/expenses/:id error");
-    res.status(500).json({ error: "Failed to update expense" });
+    handleApiError(req, res, error, "Failed to update expense");
   }
 });
 

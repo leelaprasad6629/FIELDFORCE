@@ -2,6 +2,7 @@ import { Router } from "express";
 import type { Request, Response } from "express";
 import dbConnect from "../../models/mongodb.js";
 import { requireManagerApi } from "../../lib/clerkAuth.js";
+import { handleApiError } from "../../lib/errorHandler.js";
 import { Alert } from "../../models/Alert.js";
 
 const router = Router();
@@ -20,8 +21,7 @@ router.get("/alerts", async (req: Request, res: Response) => {
       type: a.type,
     })));
   } catch (error) {
-    req.log.error({ error }, "GET /api/alerts error");
-    res.status(500).json({ error: "Failed to fetch alerts" });
+    handleApiError(req, res, error, "Failed to fetch alerts");
   }
 });
 
@@ -33,8 +33,7 @@ router.delete("/alerts/:id", async (req: Request, res: Response) => {
     await Alert.deleteOne({ _id: req.params.id });
     res.json({ ok: true });
   } catch (error) {
-    req.log.error({ error }, "DELETE /api/alerts/:id error");
-    res.status(500).json({ error: "Failed to delete alert" });
+    handleApiError(req, res, error, "Failed to delete alert");
   }
 });
 

@@ -82,9 +82,11 @@ export default function Dashboard() {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [initialLoad, setInitialLoad] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setRefreshing(true);
+    setLoadError(null);
     try {
       const [s, a, t, e] = await Promise.all([
         fetchApi<Stats>("/stats"),
@@ -97,8 +99,12 @@ export default function Dashboard() {
       setTechnicians(t);
       setPendingExpenses(e.filter((exp) => exp.status === "Pending"));
       setLastUpdated(new Date());
-    } catch { /* empty state shown */ }
-    finally { setRefreshing(false); setInitialLoad(false); }
+    } catch (err: any) {
+      setLoadError(err?.message || "Failed to load dashboard data");
+    } finally {
+      setRefreshing(false);
+      setInitialLoad(false);
+    }
   }, [fetchApi]);
 
   useEffect(() => {
@@ -250,6 +256,21 @@ export default function Dashboard() {
           </button>
         </div>
       </div>
+
+      {loadError && (
+        <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-sm flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5 text-rose-400 shrink-0" />
+            <span>{loadError}</span>
+          </div>
+          <button
+            onClick={load}
+            className="px-3 py-1 rounded bg-rose-500/20 hover:bg-rose-500/30 text-xs text-rose-200 border border-rose-500/30 transition shrink-0"
+          >
+            Retry
+          </button>
+        </div>
+      )}
 
       {initialLoad ? (
         <div className="flex items-center justify-center py-20"><Loader2 className="w-8 h-8 text-cyan-400 animate-spin" /></div>

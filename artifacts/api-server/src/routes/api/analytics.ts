@@ -2,6 +2,7 @@ import { Router } from "express";
 import type { Request, Response } from "express";
 import dbConnect from "../../models/mongodb.js";
 import { requireManagerApi } from "../../lib/clerkAuth.js";
+import { handleApiError } from "../../lib/errorHandler.js";
 import { Task } from "../../models/Task.js";
 import { Technician } from "../../models/Technician.js";
 import { Expense } from "../../models/Expense.js";
@@ -124,8 +125,7 @@ router.get("/analytics", async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    req.log.error({ error }, "GET /api/analytics error");
-    res.status(500).json({ error: "Failed to fetch analytics" });
+    handleApiError(req, res, error, "Failed to fetch analytics");
   }
 });
 

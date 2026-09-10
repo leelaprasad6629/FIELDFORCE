@@ -2,6 +2,7 @@ import { Router } from "express";
 import type { Request, Response } from "express";
 import { requireApiUser, clerkClient } from "../../lib/clerkAuth.js";
 import dbConnect from "../../models/mongodb.js";
+import { handleApiError } from "../../lib/errorHandler.js";
 import { Technician } from "../../models/Technician.js";
 import { ServiceRequest } from "../../models/ServiceRequest.js";
 import { Alert } from "../../models/Alert.js";
@@ -59,8 +60,7 @@ router.post("/user/role", async (req: Request, res: Response) => {
     }
     res.json({ role });
   } catch (error) {
-    req.log.error({ error }, "POST /api/user/role error");
-    res.status(500).json({ error: "Failed to set role" });
+    handleApiError(req, res, error, "Failed to set role");
   }
 });
 
@@ -136,8 +136,7 @@ router.get("/user/me", async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    req.log.error({ error }, "GET /api/user/me error");
-    res.status(500).json({ error: "Failed to fetch profile" });
+    handleApiError(req, res, error, "Failed to fetch profile");
   }
 });
 
@@ -168,8 +167,7 @@ router.patch("/user/me/status", async (req: Request, res: Response) => {
     }
     res.json({ ok: true, status: technician.status });
   } catch (error) {
-    req.log.error({ error }, "PATCH /api/user/me/status error");
-    res.status(500).json({ error: "Failed to update status" });
+    handleApiError(req, res, error, "Failed to update status");
   }
 });
 
@@ -202,8 +200,7 @@ router.patch("/user/me/location", async (req: Request, res: Response) => {
     await technician.save();
     res.json({ ok: true, lat: technician.lat, lng: technician.lng });
   } catch (error) {
-    req.log.error({ error }, "PATCH /api/user/me/location error");
-    res.status(500).json({ error: "Failed to update location" });
+    handleApiError(req, res, error, "Failed to update location");
   }
 });
 

@@ -2,6 +2,7 @@ import { Router } from "express";
 import type { Request, Response } from "express";
 import dbConnect from "../../models/mongodb.js";
 import { requireManagerApi } from "../../lib/clerkAuth.js";
+import { handleApiError } from "../../lib/errorHandler.js";
 import { Task } from "../../models/Task.js";
 import { Technician } from "../../models/Technician.js";
 import { ServiceRequest } from "../../models/ServiceRequest.js";
@@ -24,8 +25,7 @@ router.get("/stats", async (req: Request, res: Response) => {
     const dispatchReadiness = totalTechnicians > 0 ? Math.round((idleTechnicians / totalTechnicians) * 100) : 0;
     res.json({ serviceRequests: openRequests, activeTechnicians, taskOverview: inProgressTasks, dispatchReadiness });
   } catch (error) {
-    req.log.error({ error }, "GET /api/stats error");
-    res.status(500).json({ error: "Failed to fetch stats" });
+    handleApiError(req, res, error, "Failed to fetch stats");
   }
 });
 

@@ -2,6 +2,7 @@ import { Router } from "express";
 import type { Request, Response } from "express";
 import dbConnect from "../../models/mongodb.js";
 import { requireManagerApi } from "../../lib/clerkAuth.js";
+import { handleApiError } from "../../lib/errorHandler.js";
 import { ServiceRequest } from "../../models/ServiceRequest.js";
 import { Technician } from "../../models/Technician.js";
 import { Task } from "../../models/Task.js";
@@ -47,8 +48,7 @@ router.get("/requests", async (req: Request, res: Response) => {
     const requests = await ServiceRequest.find({}).sort({ createdAt: -1 }).lean();
     res.json(requests.map((d) => serializeRequest(d as unknown as Record<string, unknown>)));
   } catch (error) {
-    req.log.error({ error }, "GET /api/requests error");
-    res.status(500).json({ error: "Failed to fetch requests" });
+    handleApiError(req, res, error, "Failed to fetch requests");
   }
 });
 
@@ -72,8 +72,7 @@ router.post("/requests", async (req: Request, res: Response) => {
     await Alert.create({ message: `New service request created: ${title} (${category})`, timestamp: new Date(), type: "info" });
     res.status(201).json(serializeRequest(request.toObject() as unknown as Record<string, unknown>));
   } catch (error) {
-    req.log.error({ error }, "POST /api/requests error");
-    res.status(500).json({ error: "Failed to create request" });
+    handleApiError(req, res, error, "Failed to create request");
   }
 });
 
@@ -104,8 +103,7 @@ router.patch("/requests/:id", async (req: Request, res: Response) => {
     await serviceRequest.save();
     res.json(serializeRequest(serviceRequest.toObject() as unknown as Record<string, unknown>));
   } catch (error) {
-    req.log.error({ error }, "PATCH /api/requests/:id error");
-    res.status(500).json({ error: "Failed to update request" });
+    handleApiError(req, res, error, "Failed to update request");
   }
 });
 
@@ -122,8 +120,7 @@ router.delete("/requests/:id", async (req: Request, res: Response) => {
     await ServiceRequest.deleteOne({ _id: req.params.id });
     res.json({ ok: true });
   } catch (error) {
-    req.log.error({ error }, "DELETE /api/requests/:id error");
-    res.status(500).json({ error: "Failed to delete request" });
+    handleApiError(req, res, error, "Failed to delete request");
   }
 });
 
@@ -187,8 +184,7 @@ router.post("/requests/:id/assign", async (req: Request, res: Response) => {
       notification: notifResult,
     });
   } catch (error) {
-    req.log.error({ error }, "POST /api/requests/:id/assign error");
-    res.status(500).json({ error: "Failed to assign technician" });
+    handleApiError(req, res, error, "Failed to assign technician");
   }
 });
 
