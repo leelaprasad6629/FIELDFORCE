@@ -6,7 +6,7 @@ import { Technician } from "../models/Technician.js";
 export type UserRole = "manager" | "technician";
 
 export function getClerkSecretKey(): string {
-  const key = process.env.CLERK_SECRET_KEY?.trim();
+  const key = process.env.CLERK_SECRET_KEY?.trim().replace(/^["']|["']$/g, "");
   if (!key) {
     throw new Error("CLERK_SECRET_KEY is not configured in environment variables");
   }
@@ -109,9 +109,12 @@ export async function requireApiUser(
     }
 
     return { userId, role, email };
-  } catch (err) {
-    req.log?.error({ err }, "[clerkAuth] Token verification failed");
-    res.status(401).json({ error: "Unauthorized" });
+  } catch (err: any) {
+    req.log?.error({ err, errorName: err?.name, errorMessage: err?.message }, "[clerkAuth] Token verification failed");
+    res.status(401).json({
+      error: "Unauthorized",
+      detail: err?.message || "Token verification failed",
+    });
     return null;
   }
 }
