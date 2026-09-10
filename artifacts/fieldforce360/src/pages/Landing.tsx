@@ -18,10 +18,10 @@ export default function Landing({ onSignIn, onSignUp, authReady = true }: Props)
   return (
     <div className="min-h-screen flex flex-col" style={{ background: "#080C14" }}>
       <header className="relative overflow-hidden flex flex-col items-center justify-center py-16 sm:py-28 px-4 text-center">
-        <div className="absolute top-10 left-1/4 w-72 h-72 rounded-full opacity-20 blur-3xl" style={{ background: "#06B6D4", animation: "blob-one 8s ease-in-out infinite" }} />
-        <div className="absolute bottom-10 right-1/4 w-80 h-80 rounded-full opacity-15 blur-3xl" style={{ background: "#6366F1", animation: "blob-two 12s ease-in-out infinite" }} />
+        <div className="absolute top-10 left-1/4 w-72 h-72 rounded-full opacity-20 blur-3xl pointer-events-none" style={{ background: "#06B6D4", animation: "blob-one 8s ease-in-out infinite" }} />
+        <div className="absolute bottom-10 right-1/4 w-80 h-80 rounded-full opacity-15 blur-3xl pointer-events-none" style={{ background: "#6366F1", animation: "blob-two 12s ease-in-out infinite" }} />
 
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="relative z-10">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-cyan-500/30 bg-cyan-500/10 text-cyan-400 text-xs font-semibold mb-6">
             <Zap className="w-3 h-3" />
             Field Service Management Platform
