@@ -1,9 +1,30 @@
 import { Router, type IRouter } from "express";
-import { getDatabaseStatus } from "../models/mongodb.js";
+import dbConnect, { getDatabaseStatus } from "../models/mongodb.js";
 
 const router: IRouter = Router();
 
-router.get(["/health", "/healthz"], (_req, res) => {
+router.get(["/health", "/healthz"], async (req, res) => {
+  if (req.query.checkDb === "1" || req.query.checkDb === "true") {
+    try {
+      await dbConnect();
+      res.json({
+        status: "ok",
+        timestamp: new Date().toISOString(),
+        database: getDatabaseStatus(),
+      });
+    } catch (err: any) {
+      res.status(503).json({
+        status: "database_connection_failed",
+        timestamp: new Date().toISOString(),
+        database: getDatabaseStatus(),
+        error: err?.message || String(err),
+        name: err?.name,
+        code: err?.code,
+      });
+    }
+    return;
+  }
+
   const dbStatus = getDatabaseStatus();
   const isHealthy = dbStatus.readyState === 1 || dbStatus.configured;
 
